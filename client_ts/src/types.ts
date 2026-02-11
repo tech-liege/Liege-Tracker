@@ -5,3 +5,13 @@ export type Todo = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type User = {
+  id: string;
+  email: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: User;
+};
