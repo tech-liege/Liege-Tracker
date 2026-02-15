@@ -1,10 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { createTodo, deleteTodo, fetchTodos, toggleTodo } from "../api";
+import {
+  createTodo,
+  deleteTodo,
+  fetchTodos,
+  generateRoadmapFromGoal,
+  toggleTodo,
+} from "../api";
 import { useLayout } from "../context/LayoutContext";
 import { useSession } from "../context/SessionContext";
 
 const filters = ["all", "active", "completed"];
+const priorityStyles = {
+  low: "bg-emerald-100 text-emerald-700",
+  medium: "bg-amber-100 text-amber-700",
+  high: "bg-rose-100 text-rose-700",
+};
+
+function formatDueDate(value) {
+  if (!value) return "No deadline";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No deadline";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function TodosPage() {
   const { session, checkingSession } = useSession();
@@ -14,6 +36,10 @@ export default function TodosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [goal, setGoal] = useState("");
+  const [roadmapError, setRoadmapError] = useState(null);
+  const [isGeneratingRoadmap, setIsGeneratingRoadmap] = useState(false);
+  const [latestRoadmap, setLatestRoadmap] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -115,6 +141,34 @@ export default function TodosPage() {
     }
   }
 
+  async function handleGenerateRoadmap(event) {
+    event.preventDefault();
+    const normalizedGoal = goal.trim();
+    if (normalizedGoal.length < 5) {
+      setRoadmapError("Goal must be at least 5 characters.");
+      return;
+    }
+
+    setIsGeneratingRoadmap(true);
+    try {
+      const data = await generateRoadmapFromGoal(normalizedGoal);
+      setLatestRoadmap(data.roadmap);
+      setRoadmapError(null);
+      setGoal("");
+      setTodos((prev) => {
+        const knownIds = new Set(prev.map((todo) => todo._id));
+        const createdTodos = Array.isArray(data.todos)
+          ? data.todos.filter((todo) => !knownIds.has(todo._id))
+          : [];
+        return [...createdTodos, ...prev];
+      });
+    } catch (err) {
+      setRoadmapError(err.message);
+    } finally {
+      setIsGeneratingRoadmap(false);
+    }
+  }
+
   if (checkingSession) {
     return (
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
@@ -159,7 +213,46 @@ export default function TodosPage() {
       </header>
 
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div className="rounded-2xl border border-border/70 bg-sand/70 p-4 sm:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bark">
+            AI Roadmap
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-ink sm:text-2xl">
+            Describe a goal and auto-generate todos.
+          </h2>
+          <form onSubmit={handleGenerateRoadmap} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input
+              type="text"
+              value={goal}
+              onChange={(event) => setGoal(event.target.value)}
+              placeholder="Launch MVP by June with weekly deliverables"
+              className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+            />
+            <button
+              type="submit"
+              disabled={isGeneratingRoadmap}
+              className="rounded-2xl bg-ink px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isGeneratingRoadmap ? "Generating..." : "Generate"}
+            </button>
+          </form>
+          {roadmapError ? (
+            <p className="mt-3 text-sm text-red-700">{roadmapError}</p>
+          ) : null}
+          {latestRoadmap ? (
+            <div className="mt-4 rounded-xl border border-border bg-white/80 p-4">
+              <p className="text-sm font-semibold text-ink">{latestRoadmap.title}</p>
+              {latestRoadmap.summary ? (
+                <p className="mt-1 text-sm text-bark">{latestRoadmap.summary}</p>
+              ) : null}
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-bark">
+                {latestRoadmap.milestones?.length || 0} milestones saved
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <form onSubmit={handleAdd} className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
           <input
             type="text"
             placeholder="Add a new task"
@@ -219,13 +312,35 @@ export default function TodosPage() {
                 >
                   ✓
                 </button>
-                <span
-                  className={
-                    todo.completed ? "text-bark line-through" : "text-ink"
-                  }
-                >
-                  {todo.text}
-                </span>
+                <div className="min-w-0">
+                  <span
+                    className={
+                      todo.completed ? "text-bark line-through" : "text-ink"
+                    }
+                  >
+                    {todo.text}
+                  </span>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        priorityStyles[todo.priority] || priorityStyles.medium
+                      }`}
+                    >
+                      {(todo.priority || "medium").toUpperCase()}
+                    </span>
+                    <span className="rounded-full bg-ink/5 px-2.5 py-1 text-xs text-bark">
+                      {formatDueDate(todo.dueDate)}
+                    </span>
+                    {(todo.tags || []).map((tag) => (
+                      <span
+                        key={`${todo._id}-${tag}`}
+                        className="rounded-full bg-emberSoft px-2.5 py-1 text-xs text-ink"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
                 <button
                   type="button"
                   className="text-sm text-bark transition hover:text-ink"

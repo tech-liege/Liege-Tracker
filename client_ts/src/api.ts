@@ -1,8 +1,8 @@
 import type { Todo } from "./types";
 import type { AuthResponse, User } from "./types";
 
-const baseUrl = "http://localhost:4000/api/todos";
-const authUrl = "http://localhost:4000/api/auth";
+const baseUrl = "/server/api/todos";
+const authUrl = "/server/api/auth";
 const tokenKey = "liege_token";
 
 export function getStoredToken(): string | null {

@@ -1,5 +1,6 @@
 const baseUrl = "http://localhost:4000/api/todos";
 const authUrl = "http://localhost:4000/api/auth";
+const roadmapUrl = "http://localhost:4000/api/roadmaps";
 const tokenKey = "liege_token";
 
 export function getStoredToken() {
@@ -78,5 +79,14 @@ export async function loginUser(email, password) {
 
 export async function fetchMe() {
   const res = await fetch(`${authUrl}/me`, { headers: authHeaders() });
+  return handleJson(res);
+}
+
+export async function generateRoadmapFromGoal(goal) {
+  const res = await fetch(`${roadmapUrl}/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ goal }),
+  });
   return handleJson(res);
 }

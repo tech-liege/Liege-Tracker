@@ -55,6 +55,17 @@ export default function AuthPage() {
       setAuthBusy(false);
     }
   }
+  const toGuest = async (e) => {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      await login("guest@host.com", "guest_pass");
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   if (checkingSession) {
     return (
@@ -133,8 +144,16 @@ export default function AuthPage() {
           {authMode === "login" ? "Sign in" : "Register"}
         </button>
       </form>
+      <p
+        className="mx-auto text-link cursor-pointer underline font-medium text-sm"
+        onClick={toGuest}
+      >
+        Continue as Guest
+      </p>
 
-      {authError ? <p className="mt-4 text-sm text-red-700">{authError}</p> : null}
+      {authError ? (
+        <p className="mt-4 text-sm text-red-700">{authError}</p>
+      ) : null}
     </section>
   );
 }

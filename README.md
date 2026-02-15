@@ -11,7 +11,8 @@ Full-stack todo tracker.
 ### Server
 1. Copy env file and set MongoDB connection:
    - `cp server/.env.example server/.env`
-   - Add a `JWT_SECRET` value
+   - Add `JWT_SECRET`
+   - Add `OPENAI_API_KEY` (required for AI roadmap generation)
 2. Install deps and run:
    - `cd server`
    - `npm install`
@@ -24,3 +25,11 @@ Full-stack todo tracker.
    - `npm run dev`
 
 The client proxies `/api` to `http://localhost:5000`.
+
+## AI Roadmaps
+- Endpoint: `POST /api/roadmaps/generate`
+- Body: `{ "goal": "Your goal text" }`
+- Behavior:
+  - Uses OpenAI server-side to generate a roadmap with milestones.
+  - Saves the roadmap in MongoDB.
+  - Automatically creates todos from roadmap steps with `dueDate`, `tags`, and `priority`.
