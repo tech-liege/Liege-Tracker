@@ -7,7 +7,7 @@ const navItems = [
 
 export default function MobileNav() {
   return (
-    <nav className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-white/80 px-4 py-3 text-sm font-semibold shadow-soft backdrop-blur lg:hidden">
+    <nav className="flex flex-wrap sticky top-2 z-50 items-center gap-2 rounded-2xl border border-border bg-white/80 px-4 py-3 text-sm font-semibold shadow-soft backdrop-blur-[2px] lg:hidden">
       {navItems.map((item) => (
         <NavLink
           key={item.to}

@@ -2,41 +2,17 @@ import { Router } from "express";
 import requireAuth from "../middleware/auth.js";
 import Roadmap from "../models/Roadmap.js";
 import Todo from "../models/Todo.js";
+import {
+  normalizePriority,
+  normalizeTags,
+  parseDateOrNull,
+  toNonEmptyString,
+} from "../utils/fields.js";
 
 const router = Router();
-const priorities = new Set(["low", "medium", "high"]);
 const maxMilestones = 6;
 const maxTodosPerMilestone = 6;
 const maxGoalLength = 300;
-
-function toNonEmptyString(value, maxLength = 140) {
-  const normalized = String(value || "").trim().replace(/\s+/g, " ");
-  if (!normalized) return "";
-  return normalized.slice(0, maxLength);
-}
-
-function normalizePriority(value) {
-  const normalized = toNonEmptyString(value, 20).toLowerCase();
-  return priorities.has(normalized) ? normalized : "medium";
-}
-
-function normalizeTags(value) {
-  if (!Array.isArray(value)) return [];
-  const deduped = new Set();
-  for (const tag of value) {
-    const normalized = toNonEmptyString(tag, 24).toLowerCase();
-    if (normalized) deduped.add(normalized);
-    if (deduped.size >= 6) break;
-  }
-  return [...deduped];
-}
-
-function parseDate(value) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
-}
 
 function addDays(date, days) {
   const result = new Date(date);
@@ -76,8 +52,8 @@ function sanitizeRoadmapPlan(payload, goal) {
         `Milestone ${milestoneIndex + 1}`;
       const description = toNonEmptyString(milestone?.description, 400);
 
-      const startDate = parseDate(milestone?.startDate);
-      const endDate = parseDate(milestone?.endDate);
+      const startDate = parseDateOrNull(milestone?.startDate);
+      const endDate = parseDateOrNull(milestone?.endDate);
 
       const rawTodos = Array.isArray(milestone?.todos)
         ? milestone.todos.slice(0, maxTodosPerMilestone)
@@ -89,14 +65,14 @@ function sanitizeRoadmapPlan(payload, goal) {
           if (!text) return null;
 
           const dueDate =
-            parseDate(todo?.dueDate) ||
+            parseDateOrNull(todo?.dueDate) ||
             addDays(today, 7 * (milestoneIndex + 1) + todoIndex * 2);
 
           return {
             text,
             dueDate,
             priority: normalizePriority(todo?.priority),
-            tags: normalizeTags(todo?.tags),
+            tags: normalizeTags(todo?.tags, 6),
           };
         })
         .filter(Boolean);

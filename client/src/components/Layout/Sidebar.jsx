@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useSession } from "../context/SessionContext";
+import { useSession } from "../../context/SessionContext";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
@@ -10,7 +10,7 @@ export default function Sidebar() {
   const { session, logout } = useSession();
 
   return (
-    <aside className="hidden w-64 flex-col gap-8 border-r border-border bg-white/70 px-6 py-10 backdrop-blur lg:flex">
+    <aside className="hidden fixed left-0 top-0 h-[95dvh] w-64 flex-col gap-8 border-r border-border bg-white/70 px-6 py-10 backdrop-blur lg:flex">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
           Liege-Tracker

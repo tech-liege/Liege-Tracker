@@ -6,7 +6,8 @@ import { useSession } from "../context/SessionContext";
 const authModes = ["login", "register"];
 
 export default function AuthPage() {
-  const { session, checkingSession, login, register } = useSession();
+  const { session, checkingSession, login, register, continueAsGuest } =
+    useSession();
   const { setStatus } = useLayout();
   const [authMode, setAuthMode] = useState("login");
   const [authBusy, setAuthBusy] = useState(false);
@@ -55,17 +56,17 @@ export default function AuthPage() {
       setAuthBusy(false);
     }
   }
-  const toGuest = async (e) => {
+  async function toGuest() {
     setAuthBusy(true);
     setAuthError(null);
     try {
-      await login("guest@host.com", "guest_pass");
+      await continueAsGuest();
     } catch (err) {
       setAuthError(err.message);
     } finally {
       setAuthBusy(false);
     }
-  };
+  }
 
   if (checkingSession) {
     return (
@@ -144,12 +145,14 @@ export default function AuthPage() {
           {authMode === "login" ? "Sign in" : "Register"}
         </button>
       </form>
-      <p
-        className="mx-auto text-link cursor-pointer underline font-medium text-sm"
+      <button
+        type="button"
+        className="mx-auto mt-4 block text-sm font-medium text-ink underline"
         onClick={toGuest}
+        disabled={authBusy}
       >
         Continue as Guest
-      </p>
+      </button>
 
       {authError ? (
         <p className="mt-4 text-sm text-red-700">{authError}</p>

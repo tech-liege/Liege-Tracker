@@ -7,8 +7,16 @@ import {
   generateRoadmapFromGoal,
   toggleTodo,
 } from "../api";
+import AiRoadmapPanel from "../components/AiRoadmapPanel";
+import TodoItem from "../components/TodoItem";
 import { useLayout } from "../context/LayoutContext";
 import { useSession } from "../context/SessionContext";
+import {
+  createGuestTodo,
+  isGuestSession,
+  loadGuestTodos,
+  saveGuestTodos,
+} from "../utils/guestSession";
 
 const filters = ["all", "active", "completed"];
 const priorityStyles = {
@@ -41,8 +49,11 @@ export default function TodosPage() {
   const [isGeneratingRoadmap, setIsGeneratingRoadmap] = useState(false);
   const [latestRoadmap, setLatestRoadmap] = useState(null);
 
+  const isGuestUser = isGuestSession(session);
+
   useEffect(() => {
     let alive = true;
+
     if (!session) {
       setTodos([]);
       setLoading(false);
@@ -53,6 +64,16 @@ export default function TodosPage() {
     }
 
     setLoading(true);
+
+    if (isGuestUser) {
+      setTodos(loadGuestTodos());
+      setError(null);
+      setLoading(false);
+      return () => {
+        alive = false;
+      };
+    }
+
     fetchTodos()
       .then((data) => {
         if (!alive) return;
@@ -71,7 +92,19 @@ export default function TodosPage() {
     return () => {
       alive = false;
     };
-  }, [session?.token]);
+  }, [isGuestUser, session?.token]);
+
+  useEffect(() => {
+    if (!isGuestUser || loading) return;
+    saveGuestTodos(todos);
+  }, [isGuestUser, loading, todos]);
+
+  useEffect(() => {
+    if (!isGuestUser) return;
+    setGoal("");
+    setRoadmapError(null);
+    setLatestRoadmap(null);
+  }, [isGuestUser]);
 
   const completedCount = todos.filter((todo) => todo.completed).length;
 
@@ -111,17 +144,33 @@ export default function TodosPage() {
     event.preventDefault();
     const text = newText.trim();
     if (!text) return;
-    setNewText("");
+
     try {
-      const created = await createTodo(text);
+      const created = isGuestUser ? createGuestTodo(text) : await createTodo(text);
       setTodos((prev) => [created, ...prev]);
       setError(null);
+      setNewText("");
     } catch (err) {
       setError(err.message);
     }
   }
 
   async function handleToggle(todo) {
+    if (isGuestUser) {
+      setTodos((prev) =>
+        prev.map((item) =>
+          item._id === todo._id
+            ? {
+                ...item,
+                completed: !item.completed,
+                updatedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      return;
+    }
+
     try {
       const updated = await toggleTodo(todo._id, !todo.completed);
       setTodos((prev) =>
@@ -133,6 +182,11 @@ export default function TodosPage() {
   }
 
   async function handleDelete(todo) {
+    if (isGuestUser) {
+      setTodos((prev) => prev.filter((item) => item._id !== todo._id));
+      return;
+    }
+
     try {
       await deleteTodo(todo._id);
       setTodos((prev) => prev.filter((item) => item._id !== todo._id));
@@ -143,6 +197,12 @@ export default function TodosPage() {
 
   async function handleGenerateRoadmap(event) {
     event.preventDefault();
+
+    if (isGuestUser) {
+      setRoadmapError("AI roadmap generation is unavailable in guest mode.");
+      return;
+    }
+
     const normalizedGoal = goal.trim();
     if (normalizedGoal.length < 5) {
       setRoadmapError("Goal must be at least 5 characters.");
@@ -150,6 +210,7 @@ export default function TodosPage() {
     }
 
     setIsGeneratingRoadmap(true);
+
     try {
       const data = await generateRoadmapFromGoal(normalizedGoal);
       setLatestRoadmap(data.roadmap);
@@ -199,58 +260,38 @@ export default function TodosPage() {
         <div className="grid w-full max-w-xs grid-cols-2 gap-3">
           <div className="rounded-2xl border border-border bg-white/90 p-4 shadow-soft">
             <span className="text-sm text-bark">Total</span>
-            <strong className="mt-1 block text-2xl text-ink">
-              {todos.length}
-            </strong>
+            <strong className="mt-1 block text-2xl text-ink">{todos.length}</strong>
           </div>
           <div className="rounded-2xl border border-border bg-white/90 p-4 shadow-soft">
             <span className="text-sm text-bark">Done</span>
-            <strong className="mt-1 block text-2xl text-ink">
-              {completedCount}
-            </strong>
+            <strong className="mt-1 block text-2xl text-ink">{completedCount}</strong>
           </div>
         </div>
       </header>
 
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <div className="rounded-2xl border border-border/70 bg-sand/70 p-4 sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bark">
-            AI Roadmap
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-ink sm:text-2xl">
-            Describe a goal and auto-generate todos.
-          </h2>
-          <form onSubmit={handleGenerateRoadmap} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input
-              type="text"
-              value={goal}
-              onChange={(event) => setGoal(event.target.value)}
-              placeholder="Launch MVP by June with weekly deliverables"
-              className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
-            />
-            <button
-              type="submit"
-              disabled={isGeneratingRoadmap}
-              className="rounded-2xl bg-ink px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isGeneratingRoadmap ? "Generating..." : "Generate"}
-            </button>
-          </form>
-          {roadmapError ? (
-            <p className="mt-3 text-sm text-red-700">{roadmapError}</p>
-          ) : null}
-          {latestRoadmap ? (
-            <div className="mt-4 rounded-xl border border-border bg-white/80 p-4">
-              <p className="text-sm font-semibold text-ink">{latestRoadmap.title}</p>
-              {latestRoadmap.summary ? (
-                <p className="mt-1 text-sm text-bark">{latestRoadmap.summary}</p>
-              ) : null}
-              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-bark">
-                {latestRoadmap.milestones?.length || 0} milestones saved
-              </p>
-            </div>
-          ) : null}
-        </div>
+        {isGuestUser ? (
+          <div className="rounded-2xl border border-border/70 bg-sand/70 p-4 sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-bark">
+              Guest Mode
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-ink sm:text-2xl">
+              AI roadmap is disabled for guests.
+            </h2>
+            <p className="mt-2 text-sm text-bark">
+              Guest todos are stored only on this device.
+            </p>
+          </div>
+        ) : (
+          <AiRoadmapPanel
+            goal={goal}
+            setGoal={setGoal}
+            handleGenerateRoadmap={handleGenerateRoadmap}
+            isGeneratingRoadmap={isGeneratingRoadmap}
+            roadmapError={roadmapError}
+            latestRoadmap={latestRoadmap}
+          />
+        )}
 
         <form onSubmit={handleAdd} className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
           <input
@@ -293,62 +334,15 @@ export default function TodosPage() {
           <p className="mt-6 text-sm text-bark">No tasks for this filter.</p>
         ) : (
           <ul className="mt-6 grid gap-3">
-            {filteredTodos.map((todo) => (
-              <li
-                key={todo._id}
-                className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-border bg-sand px-4 py-3 transition ${
-                  todo.completed ? "opacity-80" : ""
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-pressed={todo.completed}
-                  onClick={() => handleToggle(todo)}
-                  className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold transition ${
-                    todo.completed
-                      ? "border-ember bg-ember text-white"
-                      : "border-ember bg-white text-transparent hover:shadow-[0_8px_16px_rgba(217,115,66,0.25)]"
-                  }`}
-                >
-                  ✓
-                </button>
-                <div className="min-w-0">
-                  <span
-                    className={
-                      todo.completed ? "text-bark line-through" : "text-ink"
-                    }
-                  >
-                    {todo.text}
-                  </span>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        priorityStyles[todo.priority] || priorityStyles.medium
-                      }`}
-                    >
-                      {(todo.priority || "medium").toUpperCase()}
-                    </span>
-                    <span className="rounded-full bg-ink/5 px-2.5 py-1 text-xs text-bark">
-                      {formatDueDate(todo.dueDate)}
-                    </span>
-                    {(todo.tags || []).map((tag) => (
-                      <span
-                        key={`${todo._id}-${tag}`}
-                        className="rounded-full bg-emberSoft px-2.5 py-1 text-xs text-ink"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="text-sm text-bark transition hover:text-ink"
-                  onClick={() => handleDelete(todo)}
-                >
-                  Delete
-                </button>
-              </li>
+            {filteredTodos.map((todo, index) => (
+              <TodoItem
+                key={todo?._id || `todo-${index}`}
+                todo={todo}
+                formatDueDate={formatDueDate}
+                priorityStyles={priorityStyles}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+              />
             ))}
           </ul>
         )}

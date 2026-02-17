@@ -1,7 +1,10 @@
-const baseUrl = "http://localhost:4000/api/todos";
-const authUrl = "http://localhost:4000/api/auth";
-const roadmapUrl = "http://localhost:4000/api/roadmaps";
 const tokenKey = "liege_token";
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+
+function toApiUrl(path) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${apiBaseUrl}${normalizedPath}`;
+}
 
 export function getStoredToken() {
   return localStorage.getItem(tokenKey);
@@ -29,12 +32,12 @@ async function handleJson(res) {
 }
 
 export async function fetchTodos() {
-  const res = await fetch(baseUrl, { headers: authHeaders() });
+  const res = await fetch(toApiUrl("/todos"), { headers: authHeaders() });
   return handleJson(res);
 }
 
 export async function createTodo(text) {
-  const res = await fetch(baseUrl, {
+  const res = await fetch(toApiUrl("/todos"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ text }),
@@ -43,7 +46,7 @@ export async function createTodo(text) {
 }
 
 export async function toggleTodo(id, completed) {
-  const res = await fetch(`${baseUrl}/${id}`, {
+  const res = await fetch(toApiUrl(`/todos/${id}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ completed }),
@@ -52,7 +55,7 @@ export async function toggleTodo(id, completed) {
 }
 
 export async function deleteTodo(id) {
-  const res = await fetch(`${baseUrl}/${id}`, {
+  const res = await fetch(toApiUrl(`/todos/${id}`), {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -60,7 +63,7 @@ export async function deleteTodo(id) {
 }
 
 export async function registerUser(email, password) {
-  const res = await fetch(`${authUrl}/register`, {
+  const res = await fetch(toApiUrl("/auth/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -69,7 +72,7 @@ export async function registerUser(email, password) {
 }
 
 export async function loginUser(email, password) {
-  const res = await fetch(`${authUrl}/login`, {
+  const res = await fetch(toApiUrl("/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -78,12 +81,12 @@ export async function loginUser(email, password) {
 }
 
 export async function fetchMe() {
-  const res = await fetch(`${authUrl}/me`, { headers: authHeaders() });
+  const res = await fetch(toApiUrl("/auth/me"), { headers: authHeaders() });
   return handleJson(res);
 }
 
 export async function generateRoadmapFromGoal(goal) {
-  const res = await fetch(`${roadmapUrl}/generate`, {
+  const res = await fetch(toApiUrl("/roadmaps/generate"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ goal }),

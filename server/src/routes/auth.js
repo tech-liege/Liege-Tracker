@@ -29,14 +29,6 @@ router.post("/register", async (req, res, next) => {
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
-    if (email === "dummy@email.com" && password === "dummypassword") {
-      const token = signToken("4866943d4866943b4866943d");
-      return res.status(201).json({
-        token,
-        user: { id: "4866943d4866943b4866943d", email: "dummy@email.com" },
-      });
-    }
-
     if (!isValidEmail(email)) {
       return res.status(400).send("A valid email is required.");
     }
@@ -67,22 +59,6 @@ router.post("/login", async (req, res, next) => {
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
-    if (email === "dummy@email.com" && password === "dummypassword") {
-      const token = signToken("4866943d4866943b4866943d");
-      return res.status(201).json({
-        token,
-        user: { id: "4866943d4866943b4866943d", email: "dummy@email.com" },
-      });
-    }
-
-    if (email === "guest@host.com" && password === "guest_pass") {
-      const token = signToken("e12345e12345e12345e12345");
-      return res.status(201).json({
-        token,
-        user: { id: "e12345e12345e12345e12345", email: "guest@host.com" },
-      });
-    }
-
     if (!isValidEmail(email) || !password) {
       return res.status(400).send("Email and password are required.");
     }
@@ -108,12 +84,6 @@ router.post("/login", async (req, res, next) => {
 });
 
 router.get("/me", requireAuth, async (req, res, next) => {
-  if (req.userId === "4866943d4866943b4866943d") {
-    return res.json({
-      id: "4866943d4866943b4866943d",
-      email: "dummy@email.com",
-    });
-  }
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).send("User not found.");

@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   fetchMe,
   getStoredToken,
@@ -6,6 +13,11 @@ import {
   registerUser,
   storeToken,
 } from "../api";
+import {
+  getGuestSessionToken,
+  getGuestUser,
+  isGuestToken,
+} from "../utils/guestSession";
 
 const SessionContext = createContext(null);
 
@@ -16,6 +28,12 @@ export function SessionProvider({ children }) {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
+      setCheckingSession(false);
+      return;
+    }
+
+    if (isGuestToken(token)) {
+      setSession({ token, user: getGuestUser() });
       setCheckingSession(false);
       return;
     }
@@ -34,7 +52,19 @@ export function SessionProvider({ children }) {
       });
   }, []);
 
-  async function login(email, password) {
+  const continueAsGuest = useCallback(() => {
+    const token = getGuestSessionToken();
+    const guestSession = { token, user: getGuestUser() };
+    storeToken(token);
+    setSession(guestSession);
+    return guestSession;
+  }, []);
+
+  async function login(email = "", password = "") {
+    if (String(email).trim().toLowerCase() === "guest") {
+      return continueAsGuest();
+    }
+
     const data = await loginUser(email, password);
     storeToken(data.token);
     setSession({ token: data.token, user: data.user });
@@ -60,8 +90,9 @@ export function SessionProvider({ children }) {
       login,
       register,
       logout,
+      continueAsGuest,
     }),
-    [session, checkingSession],
+    [session, checkingSession, continueAsGuest],
   );
 
   return (

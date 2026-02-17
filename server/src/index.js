@@ -44,9 +44,6 @@ mongoose
     });
   })
   .catch(async (err) => {
-    app.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
-    });
     console.error("Failed to connect to MongoDB:", err);
-    // process.exit(1);
+    process.exit(1);
   });
