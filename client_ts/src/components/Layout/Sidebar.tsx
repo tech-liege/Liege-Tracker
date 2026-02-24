@@ -1,13 +1,20 @@
 import { NavLink } from "react-router-dom";
 import { useSession } from "../../context/SessionContext";
+import { isGuestSession } from "../../utils/guestSession";
 
-const navItems = [
-  { to: "/", label: "Dashboard" },
-  { to: "/auth", label: "Authentication" },
+const authenticatedNavItems = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/roadmaps", label: "Roadmaps" },
+  { to: "/tasks", label: "Tasks" },
+  { to: "/settings", label: "Settings" },
 ];
+
+const unauthenticatedNavItems = [{ to: "/auth", label: "Authentication" }];
 
 export default function Sidebar() {
   const { session, logout } = useSession();
+  const navItems = session ? authenticatedNavItems : unauthenticatedNavItems;
+  const guestMode = isGuestSession(session);
 
   return (
     <aside className="hidden fixed left-0 top-0 h-[95dvh] w-64 flex-col gap-8 border-r border-border bg-white/70 px-6 py-10 backdrop-blur lg:flex">
@@ -17,7 +24,7 @@ export default function Sidebar() {
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-ink">Workspace</h1>
         <p className="mt-2 text-sm text-bark">
-          Keep tabs on tasks and status updates.
+          Plan goals, generate roadmaps, and execute tasks.
         </p>
       </div>
 
@@ -41,7 +48,14 @@ export default function Sidebar() {
 
       <div className="mt-auto rounded-2xl border border-border bg-sand p-4 text-sm text-bark">
         <p className="text-xs uppercase tracking-[0.2em] text-bark">Session</p>
-        <p className="mt-2 text-sm text-ink">{session ? session.user.email : "Guest"}</p>
+        <p className="mt-2 text-sm text-ink">
+          {session ? session.user.email : "Guest"}
+        </p>
+        {guestMode ? (
+          <p className="mt-2 text-xs text-bark">
+            Guest mode: AI features disabled.
+          </p>
+        ) : null}
         {session ? (
           <button
             type="button"

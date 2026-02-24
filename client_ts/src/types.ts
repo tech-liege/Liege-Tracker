@@ -1,12 +1,14 @@
-export type Priority = "low" | "medium" | "high";
+export type TodoStatus = "todo" | "in_progress" | "done";
+export type TodoPriority = "low" | "medium" | "high";
 
 export type Todo = {
   _id: string;
   text: string;
   completed: boolean;
+  status?: TodoStatus;
   dueDate?: string | null;
   tags?: string[];
-  priority?: Priority;
+  priority?: TodoPriority;
   roadmap?: string;
   milestoneTitle?: string;
   createdAt?: string;
@@ -32,16 +34,22 @@ export type AuthResponse = {
 export type RoadmapTodo = {
   text: string;
   dueDate?: string | null;
-  priority?: Priority;
+  priority?: TodoPriority;
   tags?: string[];
 };
 
 export type RoadmapMilestone = {
   title: string;
   description?: string;
-  startDate?: string;
-  endDate?: string;
-  todos?: RoadmapTodo[];
+  startDate?: string | null;
+  endDate?: string | null;
+  todos: RoadmapTodo[];
+};
+
+export type RoadmapPlan = {
+  title: string;
+  summary?: string;
+  milestones: RoadmapMilestone[];
 };
 
 export type Roadmap = {
@@ -50,14 +58,9 @@ export type Roadmap = {
   goal: string;
   title: string;
   summary?: string;
-  milestones?: RoadmapMilestone[];
+  milestones: RoadmapMilestone[];
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type GenerateRoadmapResponse = {
-  roadmap: Roadmap;
-  todos: Todo[];
 };
 
 export type LayoutStatus = {

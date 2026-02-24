@@ -3,7 +3,11 @@ import { useLayout } from "../../context/LayoutContext";
 import { useSession } from "../../context/SessionContext";
 
 const routeLabels: Record<string, string> = {
-  "/": "Dashboard",
+  "/": "Redirecting",
+  "/dashboard": "Dashboard",
+  "/roadmaps": "Roadmaps",
+  "/tasks": "Tasks",
+  "/settings": "Settings",
   "/auth": "Authentication",
 };
 

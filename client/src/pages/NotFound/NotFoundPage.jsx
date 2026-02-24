@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useLayout } from "../context/LayoutContext";
+import { useLayout } from "../../context/LayoutContext";
 import { useEffect } from "react";
 
 export default function NotFoundPage() {
@@ -25,7 +25,7 @@ export default function NotFoundPage() {
         Double-check the address or head back to your dashboard.
       </p>
       <Link
-        to="/"
+        to="/dashboard"
         className="mt-5 inline-flex rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition hover:border-ember/60 hover:text-ember"
       >
         Back to dashboard

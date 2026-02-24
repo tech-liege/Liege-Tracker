@@ -5,7 +5,7 @@ import Sidebar from "../components/Layout/Sidebar";
 
 export default function AppLayout() {
   return (
-    <div className="min-h-screen text-ink">
+    <div className="relative z-10 min-h-screen text-ink">
       <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 px-4 pb-24 pt-10 sm:px-6 lg:px-10 lg:ml-64">

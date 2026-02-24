@@ -3,6 +3,7 @@ import Todo from "../models/Todo.js";
 import requireAuth from "../middleware/auth.js";
 import {
   normalizePriority,
+  normalizeStatus,
   normalizeTags,
   parseNullableDate,
   toNonEmptyString,
@@ -15,6 +16,11 @@ function parseTodoUpdates(body) {
 
   if (typeof body.completed === "boolean") {
     updates.completed = body.completed;
+    updates.status = body.completed ? "done" : "todo";
+  }
+  if (typeof body.status === "string") {
+    updates.status = normalizeStatus(body.status);
+    updates.completed = updates.status === "done";
   }
   if (typeof body.text === "string" && body.text.trim()) {
     updates.text = body.text.trim();
@@ -50,10 +56,21 @@ router.post("/", async (req, res) => {
   }
 
   const dueDate = parseNullableDate(req.body?.dueDate);
+  const status = normalizeStatus(req.body?.status);
   const payload = {
     priority: normalizePriority(req.body?.priority),
     tags: normalizeTags(req.body?.tags, 8),
+    status,
+    completed:
+      typeof req.body?.completed === "boolean"
+        ? Boolean(req.body.completed)
+        : status === "done",
   };
+  if (payload.completed && payload.status !== "done") {
+    payload.status = "done";
+  } else if (!payload.completed && payload.status === "done") {
+    payload.completed = true;
+  }
   if (typeof dueDate !== "undefined") {
     payload.dueDate = dueDate;
   }

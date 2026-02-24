@@ -161,6 +161,45 @@ async function generateRoadmapPlan(goal) {
   return sanitizeRoadmapPlan(parsed, goal);
 }
 
+function isOpenAiError(err) {
+  const message = String(err?.message || "");
+  return (
+    message.includes("OPENAI_API_KEY") ||
+    message.includes("OpenAI response") ||
+    message.includes("OpenAI request failed")
+  );
+}
+
+async function createRoadmapWithTodos({ userId, goal, plan }) {
+  const roadmap = await Roadmap.create({
+    user: userId,
+    goal,
+    title: plan.title,
+    summary: plan.summary,
+    milestones: plan.milestones,
+  });
+
+  const todoDocs = [];
+  for (const milestone of plan.milestones) {
+    for (const todo of milestone.todos) {
+      todoDocs.push({
+        user: userId,
+        text: todo.text,
+        completed: false,
+        status: "todo",
+        dueDate: todo.dueDate,
+        tags: todo.tags,
+        priority: todo.priority,
+        roadmap: roadmap._id,
+        milestoneTitle: milestone.title,
+      });
+    }
+  }
+
+  const todos = todoDocs.length ? await Todo.insertMany(todoDocs) : [];
+  return { roadmap, todos };
+}
+
 router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
@@ -174,6 +213,47 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+router.post("/preview", async (req, res, next) => {
+  try {
+    const goal = toNonEmptyString(req.body?.goal, maxGoalLength);
+    if (!goal || goal.length < 5) {
+      return res.status(400).send("Goal must be at least 5 characters.");
+    }
+
+    const plan = await generateRoadmapPlan(goal);
+    return res.json({ goal, roadmapPlan: plan });
+  } catch (err) {
+    if (isOpenAiError(err)) {
+      return res.status(500).send(err.message);
+    }
+    return next(err);
+  }
+});
+
+router.post("/", async (req, res, next) => {
+  try {
+    const goal = toNonEmptyString(req.body?.goal, maxGoalLength);
+    if (!goal || goal.length < 5) {
+      return res.status(400).send("Goal must be at least 5 characters.");
+    }
+
+    const rawPlan = req.body?.roadmapPlan || req.body?.plan;
+    if (!rawPlan || typeof rawPlan !== "object") {
+      return res.status(400).send("roadmapPlan is required.");
+    }
+
+    const plan = sanitizeRoadmapPlan(rawPlan, goal);
+    const payload = await createRoadmapWithTodos({
+      userId: req.userId,
+      goal,
+      plan,
+    });
+    return res.status(201).json(payload);
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.post("/generate", async (req, res, next) => {
   try {
     const goal = toNonEmptyString(req.body?.goal, maxGoalLength);
@@ -182,38 +262,14 @@ router.post("/generate", async (req, res, next) => {
     }
 
     const plan = await generateRoadmapPlan(goal);
-    const roadmap = await Roadmap.create({
-      user: req.userId,
+    const payload = await createRoadmapWithTodos({
+      userId: req.userId,
       goal,
-      title: plan.title,
-      summary: plan.summary,
-      milestones: plan.milestones,
+      plan,
     });
-
-    const todoDocs = [];
-    for (const milestone of plan.milestones) {
-      for (const todo of milestone.todos) {
-        todoDocs.push({
-          user: req.userId,
-          text: todo.text,
-          completed: false,
-          dueDate: todo.dueDate,
-          tags: todo.tags,
-          priority: todo.priority,
-          roadmap: roadmap._id,
-          milestoneTitle: milestone.title,
-        });
-      }
-    }
-
-    const createdTodos = todoDocs.length ? await Todo.insertMany(todoDocs) : [];
-    return res.status(201).json({ roadmap, todos: createdTodos });
+    return res.status(201).json(payload);
   } catch (err) {
-    if (
-      String(err?.message || "").includes("OPENAI_API_KEY") ||
-      String(err?.message || "").includes("OpenAI response") ||
-      String(err?.message || "").includes("OpenAI request failed")
-    ) {
+    if (isOpenAiError(err)) {
       return res.status(500).send(err.message);
     }
     return next(err);

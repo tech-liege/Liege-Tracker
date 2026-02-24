@@ -18,12 +18,14 @@ export default function NotFoundPage() {
       <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
         Liege-Tracker
       </p>
-      <h2 className="mt-2 text-2xl font-semibold text-ink">That page is missing.</h2>
+      <h2 className="mt-2 text-2xl font-semibold text-ink">
+        That page is missing.
+      </h2>
       <p className="mt-2 text-sm text-bark">
         Double-check the address or head back to your dashboard.
       </p>
       <Link
-        to="/"
+        to="/dashboard"
         className="mt-5 inline-flex rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition hover:border-ember/60 hover:text-ember"
       >
         Back to dashboard
