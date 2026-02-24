@@ -36,20 +36,31 @@ export async function fetchTodos() {
   return handleJson(res);
 }
 
-export async function createTodo(text) {
+export async function createTodo(input) {
+  const payload =
+    typeof input === "string"
+      ? { text: input }
+      : {
+          text: input?.text,
+          dueDate: input?.dueDate || null,
+          tags: Array.isArray(input?.tags) ? input.tags : [],
+          priority: input?.priority,
+          status: input?.status,
+        };
+
   const res = await fetch(toApiUrl("/todos"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(payload),
   });
   return handleJson(res);
 }
 
-export async function toggleTodo(id, completed) {
+export async function updateTodo(id, updates) {
   const res = await fetch(toApiUrl(`/todos/${id}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ completed }),
+    body: JSON.stringify(updates),
   });
   return handleJson(res);
 }
@@ -85,11 +96,25 @@ export async function fetchMe() {
   return handleJson(res);
 }
 
-export async function generateRoadmapFromGoal(goal) {
-  const res = await fetch(toApiUrl("/roadmaps/generate"), {
+export async function fetchRoadmaps() {
+  const res = await fetch(toApiUrl("/roadmaps"), { headers: authHeaders() });
+  return handleJson(res);
+}
+
+export async function previewRoadmapFromGoal(goal) {
+  const res = await fetch(toApiUrl("/roadmaps/preview"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ goal }),
+  });
+  return handleJson(res);
+}
+
+export async function createRoadmapFromPlan(goal, roadmapPlan) {
+  const res = await fetch(toApiUrl("/roadmaps"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ goal, roadmapPlan }),
   });
   return handleJson(res);
 }

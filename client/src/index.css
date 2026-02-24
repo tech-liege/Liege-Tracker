@@ -25,6 +25,8 @@
   }
 
   #root {
+    position: relative;
+    overflow-x: hidden;
     min-height: 100vh;
     margin: 0;
     background: radial-gradient(circle at top, #867568 0%, #ccbaac 55%, #fff7f1 100%);
@@ -34,5 +36,65 @@
       linear-gradient(180deg, #867568 0%, #ccbaac 50%, #fff7f1 100%); */
     color: #1c1b1a;
     min-height: 100vh;
+  }
+
+  #root::before,
+  #root::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(38px);
+  }
+
+  #root::before {
+    width: 320px;
+    height: 320px;
+    border-radius: 999px;
+    background: rgba(255, 244, 232, 0.55);
+    top: 70px;
+    right: -100px;
+    animation: drift 14s ease-in-out infinite;
+  }
+
+  #root::after {
+    width: 280px;
+    height: 280px;
+    border-radius: 999px;
+    background: rgba(217, 115, 66, 0.2);
+    bottom: 40px;
+    left: -90px;
+    animation: drift 18s ease-in-out infinite reverse;
+  }
+}
+
+@layer utilities {
+  .ui-enter {
+    animation: rise 420ms ease-out both;
+  }
+
+  .ui-enter-delayed {
+    animation: rise 560ms ease-out both;
+  }
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(14px) translateX(-10px);
   }
 }

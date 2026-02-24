@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import {
+  createTodo,
   fetchMe,
   getStoredToken,
   loginUser,
@@ -17,12 +18,25 @@ import {
   getGuestSessionToken,
   getGuestUser,
   isGuestToken,
+  loadGuestTodos,
+  saveGuestTodos,
 } from "../utils/guestSession";
 
 const SessionContext = createContext(null);
 
+function toTodoPayload(todo) {
+  return {
+    text: String(todo?.text || "").trim(),
+    dueDate: todo?.dueDate || null,
+    tags: Array.isArray(todo?.tags) ? todo.tags : [],
+    priority: todo?.priority,
+    status: todo?.status,
+  };
+}
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
+  const [pendingGuestSync, setPendingGuestSync] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -67,8 +81,19 @@ export function SessionProvider({ children }) {
 
     const data = await loginUser(email, password);
     storeToken(data.token);
+    const guestTodos = loadGuestTodos();
+
+    if (guestTodos.length) {
+      setPendingGuestSync({
+        token: data.token,
+        user: data.user,
+        guestTodos,
+      });
+      return { ...data, pendingGuestSync: true };
+    }
+
     setSession({ token: data.token, user: data.user });
-    return data;
+    return { ...data, pendingGuestSync: false };
   }
 
   async function register(email, password) {
@@ -81,18 +106,67 @@ export function SessionProvider({ children }) {
   function logout() {
     storeToken(null);
     setSession(null);
+    setPendingGuestSync(null);
   }
+
+  const resolveGuestTodoSync = useCallback(
+    async (shouldSync) => {
+      if (!pendingGuestSync) return;
+
+      const { token, user, guestTodos } = pendingGuestSync;
+      if (shouldSync) {
+        const syncTargets = guestTodos
+          .map((todo) => ({ source: todo, payload: toTodoPayload(todo) }))
+          .filter(({ payload }) => Boolean(payload.text));
+
+        const results = await Promise.allSettled(
+          syncTargets.map(({ payload }) => createTodo(payload)),
+        );
+        const failedTodos = results
+          .map((result, index) => ({ result, todo: syncTargets[index]?.source }))
+          .filter(({ result }) => result.status === "rejected")
+          .map(({ todo }) => todo)
+          .filter(Boolean);
+
+        if (failedTodos.length) {
+          saveGuestTodos(failedTodos);
+          setPendingGuestSync((previous) =>
+            previous ? { ...previous, guestTodos: failedTodos } : previous,
+          );
+          throw new Error(
+            `Unable to sync ${failedTodos.length} guest task${
+              failedTodos.length === 1 ? "" : "s"
+            }.`,
+          );
+        }
+
+        saveGuestTodos([]);
+      }
+
+      setPendingGuestSync(null);
+      setSession({ token, user });
+    },
+    [pendingGuestSync],
+  );
 
   const value = useMemo(
     () => ({
       session,
+      pendingGuestSync,
       checkingSession,
       login,
       register,
       logout,
       continueAsGuest,
+      resolveGuestTodoSync,
     }),
-    [session, checkingSession, continueAsGuest],
+    [
+      session,
+      pendingGuestSync,
+      checkingSession,
+      continueAsGuest,
+      resolveGuestTodoSync,
+    ],
   );
 
   return (
