@@ -4,33 +4,20 @@ import {
   createRoadmapFromPlan,
   fetchRoadmaps,
   previewRoadmapFromGoal,
-} from "../api";
-import { useLayout } from "../context/LayoutContext";
-import { useSession } from "../context/SessionContext";
-import { isGuestSession } from "../utils/guestSession";
-import type { Roadmap, RoadmapPlan, TodoPriority } from "../types";
+} from "../../api";
+import { useLayout } from "../../context/LayoutContext";
+import { useSession } from "../../context/SessionContext";
+import { isGuestSession } from "../../utils/guestSession";
+import type {
+  Roadmap,
+  DraftTodo,
+  DraftMilestone,
+  DraftPlan,
+} from "../../types";
+import functions from "../../func";
 
-type DraftTodo = {
-  text: string;
-  dueDate: string;
-  priority: TodoPriority;
-  tags: string[];
-};
-
-type DraftMilestone = {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  todos: DraftTodo[];
-};
-
-type DraftPlan = {
-  goal: string;
-  title: string;
-  summary: string;
-  milestones: DraftMilestone[];
-};
+const { tasks } = functions;
+const { normalize } = tasks;
 
 function emptyTodo(): DraftTodo {
   return { text: "", dueDate: "", priority: "medium", tags: [] };
@@ -43,62 +30,6 @@ function emptyMilestone(index: number): DraftMilestone {
     startDate: "",
     endDate: "",
     todos: [emptyTodo()],
-  };
-}
-
-function normalizePriority(value: unknown): TodoPriority {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "low" || normalized === "medium" || normalized === "high") {
-    return normalized;
-  }
-  return "medium";
-}
-
-function normalizeTags(tags: unknown): string[] {
-  if (!Array.isArray(tags)) return [];
-  const unique = new Set<string>();
-  for (const tag of tags) {
-    const normalized = String(tag || "").trim().toLowerCase();
-    if (!normalized) continue;
-    unique.add(normalized);
-    if (unique.size >= 6) break;
-  }
-  return [...unique];
-}
-
-function toDateInput(value: unknown): string {
-  if (!value) return "";
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) {
-    const raw = String(value);
-    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
-  }
-  return parsed.toISOString().slice(0, 10);
-}
-
-function normalizePlan(plan: RoadmapPlan | null | undefined, goal: string): DraftPlan {
-  const rawMilestones = Array.isArray(plan?.milestones) ? plan.milestones : [];
-  const milestones: DraftMilestone[] = rawMilestones.map((milestone, milestoneIndex) => {
-    const rows = Array.isArray(milestone?.todos) ? milestone.todos : [];
-    return {
-      title: String(milestone?.title || `Milestone ${milestoneIndex + 1}`).trim(),
-      description: String(milestone?.description || "").trim(),
-      startDate: toDateInput((milestone as { startDate?: string | null })?.startDate),
-      endDate: toDateInput((milestone as { endDate?: string | null })?.endDate),
-      todos: rows.map((todo, todoIndex) => ({
-        text: String(todo?.text || `Task ${todoIndex + 1}`).trim(),
-        dueDate: toDateInput(todo?.dueDate),
-        priority: normalizePriority(todo?.priority),
-        tags: normalizeTags(todo?.tags),
-      })),
-    };
-  });
-
-  return {
-    goal: String(goal || "").trim(),
-    title: String(plan?.title || "").trim(),
-    summary: String(plan?.summary || "").trim(),
-    milestones,
   };
 }
 
@@ -181,11 +112,21 @@ export default function RoadmapsPage() {
       detail: `${roadmaps.length} saved`,
       meta: draft ? "Draft ready" : "No draft",
     });
-  }, [checkingSession, draft, isGuestUser, roadmaps.length, session, setStatus]);
+  }, [
+    checkingSession,
+    draft,
+    isGuestUser,
+    roadmaps.length,
+    session,
+    setStatus,
+  ]);
 
   const draftTaskCount = useMemo(() => {
     if (!draft?.milestones?.length) return 0;
-    return draft.milestones.reduce((count, milestone) => count + (milestone.todos?.length || 0), 0);
+    return draft.milestones.reduce(
+      (count, milestone) => count + (milestone.todos?.length || 0),
+      0,
+    );
   }, [draft]);
 
   async function handlePreview(event: FormEvent<HTMLFormElement>) {
@@ -208,7 +149,10 @@ export default function RoadmapsPage() {
 
     try {
       const response = await previewRoadmapFromGoal(normalizedGoal);
-      const nextDraft = normalizePlan(response?.roadmapPlan, response?.goal || normalizedGoal);
+      const nextDraft = normalize.plan(
+        response?.roadmapPlan,
+        response?.goal || normalizedGoal,
+      );
       setGoal(nextDraft.goal);
       setDraft(nextDraft);
     } catch (err) {
@@ -236,7 +180,9 @@ export default function RoadmapsPage() {
     try {
       const payload = await createRoadmapFromPlan(normalizedGoal, draft);
       const createdRoadmap = payload?.roadmap;
-      const createdTodos = Array.isArray(payload?.todos) ? payload.todos.length : 0;
+      const createdTodos = Array.isArray(payload?.todos)
+        ? payload.todos.length
+        : 0;
       if (createdRoadmap) {
         setRoadmaps((prev) => [createdRoadmap, ...prev]);
       }
@@ -295,7 +241,10 @@ export default function RoadmapsPage() {
   function addMilestone() {
     updateDraft((previous) => ({
       ...previous,
-      milestones: [...previous.milestones, emptyMilestone(previous.milestones.length)],
+      milestones: [
+        ...previous.milestones,
+        emptyMilestone(previous.milestones.length),
+      ],
     }));
   }
 
@@ -304,7 +253,9 @@ export default function RoadmapsPage() {
       if (previous.milestones.length <= 1) return previous;
       return {
         ...previous,
-        milestones: previous.milestones.filter((_, index) => index !== milestoneIndex),
+        milestones: previous.milestones.filter(
+          (_, index) => index !== milestoneIndex,
+        ),
       };
     });
   }
@@ -331,7 +282,9 @@ export default function RoadmapsPage() {
         if (milestone.todos.length <= 1) return milestone;
         return {
           ...milestone,
-          todos: milestone.todos.filter((_, currentTodoIndex) => currentTodoIndex !== todoIndex),
+          todos: milestone.todos.filter(
+            (_, currentTodoIndex) => currentTodoIndex !== todoIndex,
+          ),
         };
       }),
     }));
@@ -352,25 +305,37 @@ export default function RoadmapsPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">Strategy</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">Roadmap Generator</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
+          Strategy
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
+          Roadmap Generator
+        </h1>
         <p className="mt-2 text-sm text-bark">
-          Define a goal, review the AI plan, edit details, then confirm to create todos.
+          Define a goal, review the AI plan, edit details, then confirm to
+          create todos.
         </p>
       </header>
 
       <section className="ui-enter-delayed rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
         {isGuestUser ? (
           <div className="rounded-2xl border border-border bg-sand p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-bark">Guest mode</p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">AI roadmap is disabled for guests.</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-bark">
+              Guest mode
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">
+              AI roadmap is disabled for guests.
+            </h2>
             <p className="mt-2 text-sm text-bark">
               Sign in with an account to preview and create AI roadmaps.
             </p>
           </div>
         ) : (
           <>
-            <form onSubmit={handlePreview} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <form
+              onSubmit={handlePreview}
+              className="grid gap-3 sm:grid-cols-[1fr_auto]"
+            >
               <input
                 type="text"
                 value={goal}
@@ -439,7 +404,11 @@ export default function RoadmapsPage() {
                           type="text"
                           value={milestone.title}
                           onChange={(event) =>
-                            updateMilestoneField(milestoneIndex, "title", event.target.value)
+                            updateMilestoneField(
+                              milestoneIndex,
+                              "title",
+                              event.target.value,
+                            )
                           }
                           placeholder="Milestone title"
                           className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
@@ -461,7 +430,11 @@ export default function RoadmapsPage() {
                           type="date"
                           value={milestone.startDate}
                           onChange={(event) =>
-                            updateMilestoneField(milestoneIndex, "startDate", event.target.value)
+                            updateMilestoneField(
+                              milestoneIndex,
+                              "startDate",
+                              event.target.value,
+                            )
                           }
                           className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
                         />
@@ -469,7 +442,11 @@ export default function RoadmapsPage() {
                           type="date"
                           value={milestone.endDate}
                           onChange={(event) =>
-                            updateMilestoneField(milestoneIndex, "endDate", event.target.value)
+                            updateMilestoneField(
+                              milestoneIndex,
+                              "endDate",
+                              event.target.value,
+                            )
                           }
                           className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
                         />
@@ -532,7 +509,7 @@ export default function RoadmapsPage() {
                                   milestoneIndex,
                                   todoIndex,
                                   "tags",
-                                  normalizeTags(event.target.value.split(",")),
+                                  normalize.tags(event.target.value.split(",")),
                                 )
                               }
                               placeholder="tags, comma, separated"
@@ -541,7 +518,9 @@ export default function RoadmapsPage() {
                             <button
                               type="button"
                               className="text-xs text-bark underline"
-                              onClick={() => removeTodo(milestoneIndex, todoIndex)}
+                              onClick={() =>
+                                removeTodo(milestoneIndex, todoIndex)
+                              }
                             >
                               Remove
                             </button>
@@ -574,7 +553,9 @@ export default function RoadmapsPage() {
                     disabled={createBusy}
                     className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {createBusy ? "Saving..." : `Create roadmap + ${draftTaskCount} todos`}
+                    {createBusy
+                      ? "Saving..."
+                      : `Create roadmap + ${draftTaskCount} todos`}
                   </button>
                 </div>
               </div>
@@ -583,7 +564,9 @@ export default function RoadmapsPage() {
         )}
 
         {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
-        {success ? <p className="mt-4 text-sm text-emerald-700">{success}</p> : null}
+        {success ? (
+          <p className="mt-4 text-sm text-emerald-700">{success}</p>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
@@ -593,11 +576,15 @@ export default function RoadmapsPage() {
         </div>
 
         {isGuestUser ? (
-          <p className="mt-4 text-sm text-bark">No cloud roadmaps are available in guest mode.</p>
+          <p className="mt-4 text-sm text-bark">
+            No cloud roadmaps are available in guest mode.
+          </p>
         ) : loadingRoadmaps ? (
           <p className="mt-4 text-sm text-bark">Loading roadmaps...</p>
         ) : roadmaps.length === 0 ? (
-          <p className="mt-4 text-sm text-bark">No roadmaps yet. Generate your first plan above.</p>
+          <p className="mt-4 text-sm text-bark">
+            No roadmaps yet. Generate your first plan above.
+          </p>
         ) : (
           <ul className="mt-4 grid gap-3">
             {roadmaps.map((roadmap, index) => (
@@ -605,16 +592,26 @@ export default function RoadmapsPage() {
                 key={roadmap?._id || `roadmap-${index}`}
                 className="rounded-2xl border border-border bg-sand p-4"
               >
-                <p className="text-sm font-semibold text-ink">{roadmap.title}</p>
-                {roadmap.summary ? <p className="mt-1 text-sm text-bark">{roadmap.summary}</p> : null}
+                <p className="text-sm font-semibold text-ink">
+                  {roadmap.title}
+                </p>
+                {roadmap.summary ? (
+                  <p className="mt-1 text-sm text-bark">{roadmap.summary}</p>
+                ) : null}
                 <p className="mt-2 text-xs uppercase tracking-[0.18em] text-bark">
-                  {Array.isArray(roadmap.milestones) ? roadmap.milestones.length : 0} milestones
+                  {Array.isArray(roadmap.milestones)
+                    ? roadmap.milestones.length
+                    : 0}{" "}
+                  milestones
                   {roadmap.createdAt
-                    ? ` • ${new Date(roadmap.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}`
+                    ? ` • ${new Date(roadmap.createdAt).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}`
                     : ""}
                 </p>
               </li>

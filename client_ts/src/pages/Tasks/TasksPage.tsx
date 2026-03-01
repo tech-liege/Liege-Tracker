@@ -1,58 +1,28 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { createTodo, deleteTodo, fetchTodos, updateTodo } from "../api";
-import TodoItem from "../components/TodoItem";
-import { useLayout } from "../context/LayoutContext";
-import { useSession } from "../context/SessionContext";
-import {
-  createGuestTodo,
-  isGuestSession,
-  loadGuestTodos,
-  saveGuestTodos,
-} from "../utils/guestSession";
-import type { Todo, TodoPriority, TodoStatus } from "../types";
+import { createTodo, deleteTodo, fetchTodos, updateTodo } from "../../api";
+import TodoItem from "../../components/TodoItem";
+import { useLayout } from "../../context/LayoutContext";
+import { useSession } from "../../context/SessionContext";
+import { createGuestTodo, isGuestSession, loadGuestTodos, saveGuestTodos } from "../../utils/guestSession";
+import type { Todo, TodoPriority, TodoStatus } from "../../types";
+import functions from "../../func";
+
+const { tasks } = functions;
+const { normalize, formatDueDate, parseTagInput } = tasks;
 
 const statusFilters: Array<"all" | TodoStatus> = ["all", "todo", "in_progress", "done"];
 const priorityFilters: Array<"all" | TodoPriority> = ["all", "high", "medium", "low"];
-
-function formatDueDate(value?: string | null): string {
-  if (!value) return "No deadline";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "No deadline";
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function normalizeStatus(todo: Todo): TodoStatus {
-  if (todo?.status === "todo" || todo?.status === "in_progress" || todo?.status === "done") {
-    return todo.status;
-  }
-  return todo?.completed ? "done" : "todo";
-}
-
-function parseTagInput(value: string): string[] {
-  if (!value) return [];
-  const unique = new Set<string>();
-  for (const chunk of String(value).split(",")) {
-    const normalized = chunk.trim().toLowerCase();
-    if (!normalized) continue;
-    unique.add(normalized);
-    if (unique.size >= 8) break;
-  }
-  return [...unique];
-}
+const sortByOptions = ["date", "text", "priority", "status"];
+const priorityRanks = { low: 1, medium: 2, high: 3 };
+const statusRanks = { todo: 1, in_progress: 2, done: 3 };
 
 export default function TasksPage() {
   const { session, checkingSession } = useSession();
   const { setStatus } = useLayout();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<(typeof statusFilters)[number]>("all");
   const [priorityFilter, setPriorityFilter] = useState<(typeof priorityFilters)[number]>("all");
@@ -132,11 +102,11 @@ export default function TasksPage() {
 
   const stats = useMemo(() => {
     const total = todos.length;
-    const done = todos.filter((todo) => normalizeStatus(todo) === "done").length;
-    const inProgress = todos.filter((todo) => normalizeStatus(todo) === "in_progress").length;
+    const done = todos.filter((todo) => normalize.status(todo) === "done").length;
+    const inProgress = todos.filter((todo) => normalize.status(todo) === "in_progress").length;
     const todoCount = total - done - inProgress;
     const overdue = todos.filter((todo) => {
-      if (!todo?.dueDate || normalizeStatus(todo) === "done") return false;
+      if (!todo?.dueDate || normalize.status(todo) === "done") return false;
       const due = new Date(todo.dueDate);
       return !Number.isNaN(due.getTime()) && due < new Date();
     }).length;
@@ -146,7 +116,7 @@ export default function TasksPage() {
   const filteredTodos = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     return todos.filter((todo) => {
-      const todoStatus = normalizeStatus(todo);
+      const todoStatus = normalize.status(todo);
       if (statusFilter !== "all" && todoStatus !== statusFilter) return false;
       if (priorityFilter !== "all" && todo.priority !== priorityFilter) return false;
       if (!normalizedSearch) return true;
@@ -186,10 +156,8 @@ export default function TasksPage() {
     event.preventDefault();
     const text = newTodo.text.trim();
     if (!text) return;
-    if (!isOnline) {
-      setError(
-        "You are offline. Creating and updating tasks is disabled until your connection is restored.",
-      );
+    if (!isOnline && !isGuestUser) {
+      setError("You are offline. Creating and updating tasks is disabled until your connection is restored.");
       return;
     }
 
@@ -212,11 +180,9 @@ export default function TasksPage() {
   }
 
   async function handleStatusChange(todo: Todo, nextStatus: TodoStatus) {
-    if (!nextStatus || nextStatus === normalizeStatus(todo)) return;
+    if (!nextStatus || nextStatus === normalize.status(todo)) return;
     if (!isOnline) {
-      setError(
-        "You are offline. Creating and updating tasks is disabled until your connection is restored.",
-      );
+      setError("You are offline. Creating and updating tasks is disabled until your connection is restored.");
       return;
     }
 
@@ -277,9 +243,7 @@ export default function TasksPage() {
       <header className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">Execution</p>
         <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">Task Command Center</h1>
-        <p className="mt-2 text-sm text-bark">
-          Move work through clear states. Keep deadlines, tags, and priorities visible.
-        </p>
+        <p className="mt-2 text-sm text-bark">Move work through clear states. Keep deadlines, tags, and priorities visible.</p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label="Total" value={stats.total} />
@@ -291,7 +255,7 @@ export default function TasksPage() {
       </header>
 
       <section className="ui-enter-delayed rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        {!isOnline ? (
+        {!isOnline && !isGuestUser ? (
           <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Offline mode: creating and updating tasks is disabled.
           </p>
@@ -303,22 +267,18 @@ export default function TasksPage() {
             <input
               type="text"
               value={newTodo.text}
-              onChange={(event) =>
-                setNewTodo((prev) => ({ ...prev, text: event.target.value }))
-              }
+              onChange={(event) => setNewTodo((prev) => ({ ...prev, text: event.target.value }))}
               placeholder="Define the next concrete task"
               className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
             />
             <input
               type="date"
               value={newTodo.dueDate}
-              onChange={(event) =>
-                setNewTodo((prev) => ({ ...prev, dueDate: event.target.value }))
-              }
+              onChange={(event) => setNewTodo((prev) => ({ ...prev, dueDate: event.target.value }))}
               className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
             />
             <select
-	      value={newTodo.priority}
+              value={newTodo.priority}
               onChange={(event) =>
                 setNewTodo((prev) => ({
                   ...prev,
@@ -345,7 +305,7 @@ export default function TasksPage() {
             />
             <button
               type="submit"
-              disabled={!isOnline}
+              disabled={!isOnline && !isGuestUser}
               className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
             >
               Add task
@@ -362,9 +322,7 @@ export default function TasksPage() {
                 key={value}
                 type="button"
                 className={`rounded-full border px-4 py-1.5 text-sm transition ${
-                  statusFilter === value
-                    ? "border-transparent bg-emberSoft text-ink"
-                    : "border-border text-bark hover:border-ember/50 hover:text-ink"
+                  statusFilter === value ? "border-transparent bg-emberSoft text-ink" : "border-border text-bark hover:border-ember/50 hover:text-ink"
                 }`}
                 onClick={() => setStatusFilter(value)}
               >

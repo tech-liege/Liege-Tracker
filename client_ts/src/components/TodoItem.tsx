@@ -18,7 +18,7 @@ const statusOptions: Array<{ value: TodoStatus; label: string }> = [
   { value: "done", label: "Done" },
 ];
 
-function normalizeStatus(todo: Todo): TodoStatus {
+function defaultNormalizeStatus(todo: Todo): TodoStatus {
   if (
     todo?.status === "todo" ||
     todo?.status === "in_progress" ||
@@ -34,6 +34,7 @@ type Props = {
   formatDueDate: (value?: string | null) => string;
   onStatusChange: (todo: Todo, nextStatus: TodoStatus) => void;
   onDelete: (todo: Todo) => void;
+  normalizeStatus?: (todo: Todo) => TodoStatus;
   actionsDisabled?: boolean;
 };
 
@@ -42,9 +43,10 @@ export default function TodoItem({
   formatDueDate,
   onStatusChange,
   onDelete,
+  normalizeStatus,
   actionsDisabled = false,
 }: Props) {
-  const status = normalizeStatus(todo);
+  const status = normalizeStatus ? normalizeStatus(todo) : defaultNormalizeStatus(todo);
 
   return (
     <li

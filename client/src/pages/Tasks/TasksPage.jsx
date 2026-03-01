@@ -12,29 +12,16 @@ import {
 } from "../../utils/guestSession";
 import TodoItem from "./components/TodoItem";
 import StatCard from "./components/StatCard";
-import functions from "../functions";
+import functions from "../../func";
 
-const { task_todo } = functions;
-const { normalize, formatDueDate, parseTagInput } = task_todo;
+const { tasks } = functions;
+const { normalize, formatDueDate, parseTagInput, compareText, toTimestamp } = tasks;
 
 const statusFilters = ["all", "todo", "in_progress", "done"];
 const sortByOptions = ["date", "text", "priority", "status"];
 const priorityFilters = ["all", "high", "medium", "low"];
 const priorityRanks = { low: 1, medium: 2, high: 3 };
 const statusRanks = { todo: 1, in_progress: 2, done: 3 };
-
-function toTimestamp(value) {
-  if (!value) return null;
-  const parsed = new Date(value).getTime();
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function compareText(a, b) {
-  return String(a || "").localeCompare(String(b || ""), undefined, {
-    sensitivity: "base",
-    numeric: true,
-  });
-}
 
 export default function TasksPage() {
   const { session, checkingSession } = useSession();

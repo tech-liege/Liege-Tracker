@@ -8,7 +8,7 @@ import {
 import { useLayout } from "../../context/LayoutContext";
 import { useSession } from "../../context/SessionContext";
 import { isGuestSession } from "../../utils/guestSession";
-import functions from "../functions";
+import functions from "../../func";
 
 const { task_todo } = functions;
 const { normalize } = task_todo;

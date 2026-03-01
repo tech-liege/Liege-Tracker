@@ -1,14 +1,15 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LayoutProvider } from "./context/LayoutContext";
+import { UXProvider } from "./context/UXContext";
 import { SessionProvider, useSession } from "./context/SessionContext";
 import AppLayout from "./layouts/AppLayout";
-import AuthPage from "./pages/AuthPage";
-import HomePage from "./pages/HomePage";
-import DashboardPage from "./pages/DashboardPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import RoadmapsPage from "./pages/RoadmapsPage";
-import SettingsPage from "./pages/SettingsPage";
-import TasksPage from "./pages/TasksPage";
+import AuthPage from "./pages/Auth/AuthPage";
+import HomePage from "./pages/Home/HomePage";
+import DashboardPage from "./pages/Dashboard/DashboardPage";
+import NotFoundPage from "./pages/NotFound/NotFoundPage";
+import RoadmapsPage from "./pages/Roadmap/RoadmapsPage";
+import SettingsPage from "./pages/Settings/SettingsPage";
+import TasksPage from "./pages/Tasks/TasksPage";
 
 function RootRedirect() {
   const { session, checkingSession } = useSession();
@@ -29,18 +30,20 @@ export default function App() {
     <BrowserRouter>
       <SessionProvider>
         <LayoutProvider>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route index element={<RootRedirect />} />
-              <Route path="home" element={<HomePage />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="roadmaps" element={<RoadmapsPage />} />
-              <Route path="tasks" element={<TasksPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="auth" element={<AuthPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
+          <UXProvider>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<RootRedirect />} />
+                <Route path="home" element={<HomePage />} />
+                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="roadmaps" element={<RoadmapsPage />} />
+                <Route path="tasks" element={<TasksPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="auth" element={<AuthPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </UXProvider>
         </LayoutProvider>
       </SessionProvider>
     </BrowserRouter>

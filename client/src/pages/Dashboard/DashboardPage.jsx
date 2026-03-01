@@ -4,7 +4,7 @@ import { fetchRoadmaps, fetchTodos } from "../../api";
 import { useLayout } from "../../context/LayoutContext";
 import { useSession } from "../../context/SessionContext";
 import { isGuestSession, loadGuestTodos } from "../../utils/guestSession";
-import functions from "../functions";
+import functions from "../../func";
 import MetricCard from "./components/MetricCard";
 import ActionCard from "./components/ActionCard";
 

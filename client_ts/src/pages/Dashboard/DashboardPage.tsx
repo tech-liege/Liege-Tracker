@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { fetchRoadmaps, fetchTodos } from "../api";
-import { useLayout } from "../context/LayoutContext";
-import { useSession } from "../context/SessionContext";
-import { isGuestSession, loadGuestTodos } from "../utils/guestSession";
-import type { Roadmap, Todo, TodoStatus } from "../types";
+import { fetchRoadmaps, fetchTodos } from "../../api";
+import { useLayout } from "../../context/LayoutContext";
+import { useSession } from "../../context/SessionContext";
+import { isGuestSession, loadGuestTodos } from "../../utils/guestSession";
+import type { Roadmap, Todo } from "../../types";
+import functions from "../../func";
+import ActionCard from "./components/ActionCard";
+import MetricCard from "./components/MetricCard";
 
-function normalizeStatus(todo: Todo): TodoStatus {
-  if (todo?.status === "todo" || todo?.status === "in_progress" || todo?.status === "done") {
-    return todo.status;
-  }
-  return todo?.completed ? "done" : "todo";
-}
+const { tasks } = functions;
+const { normalize } = tasks;
 
 export default function DashboardPage() {
   const { session, checkingSession } = useSession();
@@ -70,11 +69,15 @@ export default function DashboardPage() {
   }, [isGuestUser, session?.token]);
 
   const stats = useMemo(() => {
-    const done = todos.filter((todo) => normalizeStatus(todo) === "done").length;
-    const inProgress = todos.filter((todo) => normalizeStatus(todo) === "in_progress").length;
+    const done = todos.filter(
+      (todo) => normalize.status(todo) === "done",
+    ).length;
+    const inProgress = todos.filter(
+      (todo) => normalize.status(todo) === "in_progress",
+    ).length;
     const todoCount = todos.length - done - inProgress;
     const overdue = todos.filter((todo) => {
-      if (!todo?.dueDate || normalizeStatus(todo) === "done") return false;
+      if (!todo?.dueDate || normalize.status(todo) === "done") return false;
       const due = new Date(todo.dueDate);
       return !Number.isNaN(due.getTime()) && due < new Date();
     }).length;
@@ -90,12 +93,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (checkingSession) {
-      setStatus({ title: "Dashboard", detail: "Checking session", meta: "Hold tight" });
+      setStatus({
+        title: "Dashboard",
+        detail: "Checking session",
+        meta: "Hold tight",
+      });
       return;
     }
 
     if (!session) {
-      setStatus({ title: "Dashboard", detail: "Sign in required", meta: "Guest" });
+      setStatus({
+        title: "Dashboard",
+        detail: "Sign in required",
+        meta: "Guest",
+      });
       return;
     }
 
@@ -104,7 +115,15 @@ export default function DashboardPage() {
       detail: `${stats.done} done • ${stats.totalTasks} total tasks`,
       meta: isGuestUser ? "Guest mode" : `${stats.roadmaps} roadmaps`,
     });
-  }, [checkingSession, isGuestUser, session, setStatus, stats.done, stats.roadmaps, stats.totalTasks]);
+  }, [
+    checkingSession,
+    isGuestUser,
+    session,
+    setStatus,
+    stats.done,
+    stats.roadmaps,
+    stats.totalTasks,
+  ]);
 
   if (checkingSession) {
     return (
@@ -121,8 +140,12 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">Liege-Tracker</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">Build momentum every day.</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
+          Liege-Tracker
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
+          Build momentum every day.
+        </h1>
         <p className="mt-2 text-sm text-bark">
           {isGuestUser
             ? "You are in guest mode. Todos stay on this device and AI roadmap generation is disabled."
@@ -130,11 +153,31 @@ export default function DashboardPage() {
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MetricCard label="Tasks" value={stats.totalTasks} detail={`${stats.todoCount} to do`} />
-          <MetricCard label="In Progress" value={stats.inProgress} detail={`${stats.done} completed`} />
-          <MetricCard label="Overdue" value={stats.overdue} detail="Needs attention" />
-          <MetricCard label="Roadmaps" value={stats.roadmaps} detail="Saved strategy" />
-          <MetricCard label="Session" value={isGuestUser ? "Guest" : "User"} detail={session.user.email} />
+          <MetricCard
+            label="Tasks"
+            value={stats.totalTasks}
+            detail={`${stats.todoCount} to do`}
+          />
+          <MetricCard
+            label="In Progress"
+            value={stats.inProgress}
+            detail={`${stats.done} completed`}
+          />
+          <MetricCard
+            label="Overdue"
+            value={stats.overdue}
+            detail="Needs attention"
+          />
+          <MetricCard
+            label="Roadmaps"
+            value={stats.roadmaps}
+            detail="Saved strategy"
+          />
+          <MetricCard
+            label="Session"
+            value={isGuestUser ? "Guest" : "User"}
+            detail={session.user.email}
+          />
           <MetricCard
             label="Focus"
             value={error ? "Blocked" : loading ? "Syncing" : "Ready"}
@@ -167,52 +210,10 @@ export default function DashboardPage() {
       </section>
 
       {error ? (
-        <section className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">{error}</section>
+        <section className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">
+          {error}
+        </section>
       ) : null}
     </div>
-  );
-}
-
-type MetricCardProps = {
-  label: string;
-  value: string | number;
-  detail: string;
-};
-
-function MetricCard({ label, value, detail }: MetricCardProps) {
-  return (
-    <article className="rounded-2xl border border-border bg-sand p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-bark">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
-      <p className="mt-1 text-xs text-bark">{detail}</p>
-    </article>
-  );
-}
-
-type ActionCardProps = {
-  title: string;
-  description: string;
-  cta: string;
-  to: string;
-  disabled?: boolean;
-  helper?: string | null;
-};
-
-function ActionCard({ title, description, cta, to, disabled, helper }: ActionCardProps) {
-  return (
-    <article className="rounded-2xl border border-border bg-white/90 p-5 shadow-soft">
-      <h2 className="text-lg font-semibold text-ink">{title}</h2>
-      <p className="mt-1 text-sm text-bark">{description}</p>
-      {disabled ? (
-        <p className="mt-4 text-sm text-bark">{helper || "Unavailable"}</p>
-      ) : (
-        <Link
-          to={to}
-          className="mt-4 inline-flex rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition hover:border-ember/60 hover:text-ember"
-        >
-          {cta}
-        </Link>
-      )}
-    </article>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { useLayout } from "../context/LayoutContext";
-import { useSession } from "../context/SessionContext";
+import { useLayout } from "../../context/LayoutContext";
+import { useSession } from "../../context/SessionContext";
 
 const authModes = ["login", "register"] as const;
 

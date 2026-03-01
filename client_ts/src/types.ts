@@ -68,3 +68,25 @@ export type LayoutStatus = {
   detail: string;
   meta?: string;
 };
+
+export type DraftTodo = {
+  text: string;
+  dueDate: string;
+  priority: TodoPriority;
+  tags: string[];
+};
+
+export type DraftMilestone = {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  todos: DraftTodo[];
+};
+
+export type DraftPlan = {
+  goal: string;
+  title: string;
+  summary: string;
+  milestones: DraftMilestone[];
+};
