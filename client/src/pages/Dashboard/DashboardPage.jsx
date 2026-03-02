@@ -8,8 +8,8 @@ import functions from "../../func";
 import MetricCard from "./components/MetricCard";
 import ActionCard from "./components/ActionCard";
 
-const { task_todo } = functions;
-const { normalize } = task_todo;
+const { tasks } = functions;
+const { normalize } = tasks;
 
 export default function DashboardPage() {
   const { session, checkingSession } = useSession();

@@ -10,8 +10,8 @@ import { useSession } from "../../context/SessionContext";
 import { isGuestSession } from "../../utils/guestSession";
 import functions from "../../func";
 
-const { task_todo } = functions;
-const { normalize } = task_todo;
+const { tasks } = functions;
+const { normalize } = tasks;
 
 function emptyTodo() {
   return { text: "", dueDate: "", priority: "medium", tags: [] };
