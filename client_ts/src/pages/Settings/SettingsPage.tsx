@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
-import { isGuestSession } from "../../utils/guestSession";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
+import { isGuestSession } from "@/utils/guestSession";
 import InfoCard from "./components/InfoCard";
 
 export default function SettingsPage() {

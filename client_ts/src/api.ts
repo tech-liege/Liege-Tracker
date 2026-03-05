@@ -1,5 +1,6 @@
 import type {
   AuthResponse,
+  RegistrationResponse,
   Roadmap,
   RoadmapPlan,
   Session,
@@ -101,13 +102,13 @@ export async function deleteTodo(id: string): Promise<{ deleted: boolean }> {
 export async function registerUser(
   email: string,
   password: string,
-): Promise<AuthResponse> {
+): Promise<RegistrationResponse> {
   const res = await fetch(toApiUrl("/auth/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  return handleJson<AuthResponse>(res);
+  return handleJson<RegistrationResponse>(res);
 }
 
 export async function loginUser(
@@ -120,6 +121,23 @@ export async function loginUser(
     body: JSON.stringify({ email, password }),
   });
   return handleJson<AuthResponse>(res);
+}
+
+export async function verifyAccount(token: string): Promise<{ message?: string }> {
+  const params = new URLSearchParams({ token });
+  const res = await fetch(toApiUrl(`/auth/verify-account?${params}`));
+  return handleJson<{ message?: string }>(res);
+}
+
+export async function requestAccountVerification(
+  email: string,
+): Promise<{ message?: string }> {
+  const res = await fetch(toApiUrl("/auth/verify-account/request"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return handleJson<{ message?: string }>(res);
 }
 
 export async function fetchMe(): Promise<User> {

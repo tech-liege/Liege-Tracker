@@ -1,15 +1,20 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { LayoutProvider } from "./context/LayoutContext";
-import { UXProvider } from "./context/UXContext";
 import { SessionProvider, useSession } from "./context/SessionContext";
-import AppLayout from "./layouts/AppLayout";
+import AuthedLayout from "./layouts/AuthedLayout";
+import AuthedProviders from "./layouts/AuthedProviders";
+import PublicLayout from "./layouts/PublicLayout";
 import AuthPage from "./pages/Authentication/AuthPage";
+import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/Authentication/ResetPasswordPage";
+import VerifyAccountPage from "./pages/Authentication/VerifyAccountPage";
 import HomePage from "./pages/Home/HomePage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import NotFoundPage from "./pages/NotFound/NotFoundPage";
 import RoadmapsPage from "./pages/Roadmaps/RoadmapsPage";
 import SettingsPage from "./pages/Settings/SettingsPage";
 import TasksPage from "./pages/Tasks/TasksPage";
+import RequireAuth from "./routes/RequireAuth";
+import RequireGuest from "./routes/RequireGuest";
 
 function RootRedirect() {
   const { session, checkingSession } = useSession();
@@ -29,22 +34,37 @@ export default function App() {
   return (
     <BrowserRouter>
       <SessionProvider>
-        <LayoutProvider>
-          <UXProvider>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route index element={<RootRedirect />} />
-                <Route path="home" element={<HomePage />} />
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+
+          <Route element={<RequireGuest />}>
+            <Route element={<PublicLayout />}>
+              <Route path="home" element={<HomePage />} />
+              <Route path="auth" element={<AuthPage />} />
+              <Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="auth/reset-password" element={<ResetPasswordPage />} />
+            </Route>
+          </Route>
+
+          <Route element={<PublicLayout />}>
+            <Route path="auth/verify-account" element={<VerifyAccountPage />} />
+          </Route>
+
+          <Route element={<RequireAuth />}>
+            <Route element={<AuthedProviders />}>
+              <Route element={<AuthedLayout />}>
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="roadmaps" element={<RoadmapsPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="settings" element={<SettingsPage />} />
-                <Route path="auth" element={<AuthPage />} />
-                <Route path="*" element={<NotFoundPage />} />
               </Route>
-            </Routes>
-          </UXProvider>
-        </LayoutProvider>
+            </Route>
+          </Route>
+
+          <Route element={<PublicLayout />}>
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
       </SessionProvider>
     </BrowserRouter>
   );

@@ -31,6 +31,13 @@ export type AuthResponse = {
   user: User;
 };
 
+export type RegistrationResponse = {
+  token?: string;
+  user?: User;
+  requiresVerification?: boolean;
+  message?: string;
+};
+
 export type RoadmapTodo = {
   text: string;
   dueDate?: string | null;

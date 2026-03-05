@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { createTodo, deleteTodo, fetchTodos, updateTodo } from "../../api";
-import TodoItem from "../../components/TodoItem";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
-import { createGuestTodo, isGuestSession, loadGuestTodos, saveGuestTodos } from "../../utils/guestSession";
-import type { Todo, TodoPriority, TodoStatus } from "../../types";
-import functions from "../../func";
+import { createTodo, deleteTodo, fetchTodos, updateTodo } from "@/api";
+import TodoItem from "@/components/TodoItem";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
+import { createGuestTodo, isGuestSession, loadGuestTodos, saveGuestTodos } from "@/utils/guestSession";
+import type { Todo, TodoPriority, TodoStatus } from "@/types";
+import { tasks } from "@/func";
 
-const { tasks } = functions;
 const { normalize, formatDueDate, parseTagInput } = tasks;
 
 const statusFilters: Array<"all" | TodoStatus> = ["all", "todo", "in_progress", "done"];

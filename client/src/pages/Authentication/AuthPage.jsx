@@ -1,64 +1,44 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
+import { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { requestAccountVerification } from "@/api";
+import { BoltIcon, Button, Field, SparkIcon, TasksIcon, UserIcon } from "@/components/ui";
+import { useSession } from "@/context/SessionContext";
 
 const authModes = ["login", "register"];
 
 export default function AuthPage() {
-  const {
-    session,
-    pendingGuestSync,
-    checkingSession,
-    login,
-    register,
-    continueAsGuest,
-    resolveGuestTodoSync,
-  } = useSession();
-  const { setStatus } = useLayout();
+  const { session, pendingGuestSync, checkingSession, login, register, continueAsGuest, resolveGuestTodoSync } = useSession();
   const [authMode, setAuthMode] = useState("login");
   const [authBusy, setAuthBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [authMessage, setAuthMessage] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const waitingForGuestSync = Boolean(pendingGuestSync);
-
-  useEffect(() => {
-    if (checkingSession) {
-      setStatus({
-        title: "Authentication",
-        detail: "Checking session",
-        meta: "Hold tight",
-      });
-      return;
-    }
-
-    if (session) {
-      setStatus({
-        title: "Authenticated",
-        detail: "Session active",
-        meta: session.user.email,
-      });
-      return;
-    }
-
-    setStatus({
-      title: "Authentication",
-      detail:
-        authMode === "login" ? "Sign in to continue" : "Create an account",
-      meta: "Guest",
-    });
-  }, [authMode, checkingSession, session, setStatus]);
 
   async function handleAuthSubmit(event) {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError(null);
+    setAuthMessage(null);
     try {
-      const action = authMode === "login" ? login : register;
-      await action(email, password);
+      if (authMode === "register" && password !== confirmPassword) {
+        throw new Error("Passwords do not match.");
+      }
+
+      if (authMode === "login") {
+        await login(email, password);
+      } else {
+        const response = await register(email, password, confirmPassword);
+        setAuthMessage(response?.message || "Account created. Check your email to verify your account.");
+        setAuthMode("login");
+      }
+
       setEmail("");
       setPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setAuthError(err.message);
     } finally {
@@ -90,6 +70,27 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResendVerification() {
+    if (!email.trim()) {
+      setAuthError("Enter your email first.");
+      return;
+    }
+
+    setResendBusy(true);
+    setAuthError(null);
+    setAuthMessage(null);
+    try {
+      const response = await requestAccountVerification(email);
+      setAuthMessage(
+        response?.message || "If an account exists and is unverified, a verification email has been sent.",
+      );
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   if (checkingSession) {
     return (
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
@@ -103,82 +104,125 @@ export default function AuthPage() {
   }
 
   return (
-    <section className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
-            Liege-Tracker
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-ink">
-            {authMode === "login" ? "Sign in" : "Create an account"}
-          </h2>
-          <p className="mt-1 text-sm text-bark">
-            {authMode === "login"
-              ? "Access your personal todo list."
-              : "Start tracking tasks with a new account."}
-          </p>
+    <section className="ui-enter grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <article className="relative overflow-hidden rounded-3xl bg-ink px-6 py-8 text-white shadow-[0_30px_70px_rgba(16,42,67,0.34)] sm:px-8 sm:py-10">
+        <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-ember/50 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-[#1c7c8e]/35 blur-3xl" />
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-100/90">Liege-Tracker</p>
+        <h1 className="mt-4 max-w-md text-3xl font-semibold leading-tight sm:text-4xl">
+          {authMode === "login" ? "Welcome back. Let’s keep momentum." : "Create your workspace in under a minute."}
+        </h1>
+        <p className="mt-4 max-w-md text-sm text-cyan-50/85">
+          {authMode === "login"
+            ? "Open your dashboard, sync your priorities, and move tasks forward."
+            : "Sign up to store tasks in the cloud and unlock AI roadmap generation."}
+        </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <article className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-cyan-50/80">
+              <SparkIcon className="h-4 w-4" />
+              Core
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">AI roadmap drafts + execution board</p>
+          </article>
+          <article className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-cyan-50/80">
+              <TasksIcon className="h-4 w-4" />
+              Guest
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">Try the workflow before creating an account</p>
+          </article>
         </div>
-        <div className="flex gap-2">
+      </article>
+
+      <article className="rounded-3xl border border-border bg-white/95 p-6 shadow-soft sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-bark">
+              <UserIcon className="h-4 w-4" />
+              Authentication
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{authMode === "login" ? "Sign in" : "Create an account"}</h2>
+          </div>
           {authModes.map((mode) => (
             <button
               key={mode}
               type="button"
               className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
-                authMode === mode
-                  ? "border-transparent bg-emberSoft text-ink"
-                  : "border-border text-bark hover:border-ember/50 hover:text-ink"
+                authMode === mode ? "border-transparent bg-emberSoft text-ink" : "border-border text-bark hover:border-ember/50 hover:text-ink"
               }`}
               onClick={() => {
                 setAuthMode(mode);
                 setAuthError(null);
+                setAuthMessage(null);
+                setPassword("");
+                setConfirmPassword("");
               }}
             >
               {mode === "login" ? "Sign in" : "Register"}
             </button>
           ))}
         </div>
-      </div>
 
-      <form
-        onSubmit={handleAuthSubmit}
-        className="mt-6 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
-      >
-        <input
-          type="email"
-          placeholder="Email address"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={authBusy || waitingForGuestSync}
-          className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
-        />
-        <input
-          type="password"
-          placeholder="Password (min 8 characters)"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          disabled={authBusy || waitingForGuestSync}
-          className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
-        />
-        <button
-          type="submit"
-          disabled={authBusy || waitingForGuestSync}
-          className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
+        <form onSubmit={handleAuthSubmit} className="mt-6 grid gap-3">
+          <Field
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={authBusy || resendBusy || waitingForGuestSync}
+          />
+          <Field
+            type="password"
+            placeholder="Password (min 8 characters)"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={authBusy || resendBusy || waitingForGuestSync}
+          />
+          {authMode === "register" ? (
+            <Field
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              disabled={authBusy || resendBusy || waitingForGuestSync}
+            />
+          ) : null}
+          {authMode === "login" ? (
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={authBusy || resendBusy || waitingForGuestSync}
+                className="text-xs font-semibold text-bark underline transition hover:text-ember disabled:opacity-60"
+              >
+                {resendBusy ? "Sending..." : "Resend verification email"}
+              </button>
+              <Link to="/auth/forgot-password" className="text-xs font-semibold text-bark underline transition hover:text-ember">
+                Forgot password?
+              </Link>
+            </div>
+          ) : null}
+          <Button type="submit" disabled={authBusy || resendBusy || waitingForGuestSync} className="mt-1 w-full justify-center py-3">
+            <BoltIcon className="h-4 w-4" />
+            {authMode === "login" ? "Sign in to Workspace" : "Create Account"}
+          </Button>
+        </form>
+        <Button
+          type="button"
+          variant="ghost"
+          className="mt-3 block w-full text-center"
+          onClick={toGuest}
+          disabled={authBusy || resendBusy || waitingForGuestSync}
         >
-          {authMode === "login" ? "Sign in" : "Register"}
-        </button>
-      </form>
-      <button
-        type="button"
-        className="mx-auto mt-4 block text-sm font-medium text-ink underline"
-        onClick={toGuest}
-        disabled={authBusy || waitingForGuestSync}
-      >
-        Continue as Guest
-      </button>
+          Continue as Guest
+        </Button>
 
-      {authError ? (
-        <p className="mt-4 text-sm text-red-700">{authError}</p>
-      ) : null}
+        {authError ? <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{authError}</p> : null}
+        {authMessage ? (
+          <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{authMessage}</p>
+        ) : null}
+      </article>
 
       {waitingForGuestSync ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
@@ -186,8 +230,7 @@ export default function AuthPage() {
             <h3 className="text-xl font-semibold text-ink">Sync guest tasks?</h3>
             <p className="mt-2 text-sm text-bark">
               We found {pendingGuestSync.guestTodos.length} local guest task
-              {pendingGuestSync.guestTodos.length === 1 ? "" : "s"}. Do you
-              want to sync them to this account?
+              {pendingGuestSync.guestTodos.length === 1 ? "" : "s"}. Do you want to sync them to this account?
             </p>
             <div className="mt-5 flex justify-end gap-3">
               <button

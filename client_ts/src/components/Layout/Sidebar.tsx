@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { useSession } from "../../context/SessionContext";
-import { isGuestSession } from "../../utils/guestSession";
+import { useSession } from "@/context/SessionContext";
+import { isGuestSession } from "@/utils/guestSession";
 
 const authenticatedNavItems = [
   { to: "/dashboard", label: "Dashboard" },

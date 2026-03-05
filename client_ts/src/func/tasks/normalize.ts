@@ -1,17 +1,8 @@
-import type { Todo, TodoStatus } from "../../types";
-import type {
-  RoadmapPlan,
-  TodoPriority,
-  DraftMilestone,
-  DraftPlan,
-} from "../../types";
+import type { Todo, TodoStatus } from "@/types";
+import type { RoadmapPlan, TodoPriority, DraftMilestone, DraftPlan } from "@/types";
 
 function normalizeStatus(todo: Todo): TodoStatus {
-  if (
-    todo?.status === "todo" ||
-    todo?.status === "in_progress" ||
-    todo?.status === "done"
-  ) {
+  if (todo?.status === "todo" || todo?.status === "in_progress" || todo?.status === "done") {
     return todo.status;
   }
   return todo?.completed ? "done" : "todo";
@@ -21,11 +12,7 @@ function normalizePriority(value: unknown): TodoPriority {
   const normalized = String(value || "")
     .trim()
     .toLowerCase();
-  if (
-    normalized === "low" ||
-    normalized === "medium" ||
-    normalized === "high"
-  ) {
+  if (normalized === "low" || normalized === "medium" || normalized === "high") {
     return normalized;
   }
   return "medium";
@@ -55,34 +42,23 @@ function toDateInput(value: unknown): string {
   return parsed.toISOString().slice(0, 10);
 }
 
-function normalizePlan(
-  plan: RoadmapPlan | null | undefined,
-  goal: string,
-): DraftPlan {
+function normalizePlan(plan: RoadmapPlan | null | undefined, goal: string): DraftPlan {
   const rawMilestones = Array.isArray(plan?.milestones) ? plan.milestones : [];
-  const milestones: DraftMilestone[] = rawMilestones.map(
-    (milestone, milestoneIndex) => {
-      const rows = Array.isArray(milestone?.todos) ? milestone.todos : [];
-      return {
-        title: String(
-          milestone?.title || `Milestone ${milestoneIndex + 1}`,
-        ).trim(),
-        description: String(milestone?.description || "").trim(),
-        startDate: toDateInput(
-          (milestone as { startDate?: string | null })?.startDate,
-        ),
-        endDate: toDateInput(
-          (milestone as { endDate?: string | null })?.endDate,
-        ),
-        todos: rows.map((todo, todoIndex) => ({
-          text: String(todo?.text || `Task ${todoIndex + 1}`).trim(),
-          dueDate: toDateInput(todo?.dueDate),
-          priority: normalizePriority(todo?.priority),
-          tags: normalizeTags(todo?.tags),
-        })),
-      };
-    },
-  );
+  const milestones: DraftMilestone[] = rawMilestones.map((milestone, milestoneIndex) => {
+    const rows = Array.isArray(milestone?.todos) ? milestone.todos : [];
+    return {
+      title: String(milestone?.title || `Milestone ${milestoneIndex + 1}`).trim(),
+      description: String(milestone?.description || "").trim(),
+      startDate: toDateInput((milestone as { startDate?: string | null })?.startDate),
+      endDate: toDateInput((milestone as { endDate?: string | null })?.endDate),
+      todos: rows.map((todo, todoIndex) => ({
+        text: String(todo?.text || `Task ${todoIndex + 1}`).trim(),
+        dueDate: toDateInput(todo?.dueDate),
+        priority: normalizePriority(todo?.priority),
+        tags: normalizeTags(todo?.tags),
+      })),
+    };
+  });
 
   return {
     goal: String(goal || "").trim(),

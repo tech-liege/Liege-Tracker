@@ -1,6 +1,6 @@
 const priorityStyles = {
   low: "bg-emerald-100 text-emerald-700",
-  medium: "bg-amber-100 text-amber-700",
+  medium: "bg-sky-100 text-sky-700",
   high: "bg-rose-100 text-rose-700",
 };
 
@@ -23,18 +23,25 @@ export default function TodoItem({
   onDelete,
   normalizeStatus,
   actionsDisabled = false,
+  className = "",
 }) {
   const status = normalizeStatus(todo);
+  const classes = [
+    `grid gap-3 rounded-2xl border border-border bg-white px-4 py-3 transition sm:grid-cols-[1fr_auto] ${
+      status === "done" ? "opacity-80" : ""
+    }`,
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <li
-      className={`grid gap-3 rounded-2xl border border-border bg-sand px-4 py-3 transition sm:grid-cols-[1fr_auto] ${
-        status === "done" ? "opacity-80" : ""
-      }`}
-    >
+    <li className={classes}>
       <div className="min-w-0">
         <p
-          className={status === "done" ? "text-bark line-through" : "text-ink"}
+          className={`text-sm leading-relaxed ${
+            status === "done" ? "text-bark line-through" : "text-ink"
+          }`}
         >
           {todo?.text || "No text"}
         </p>
@@ -54,13 +61,13 @@ export default function TodoItem({
           >
             {(todo?.priority || "medium").toUpperCase()}
           </span>
-          <span className="rounded-full bg-ink/5 px-2.5 py-1 text-xs text-bark">
+          <span className="rounded-full bg-[#e6f1fa] px-2.5 py-1 text-xs text-bark">
             {formatDueDate(todo?.dueDate)}
           </span>
           {(todo?.tags || []).map((tag) => (
             <span
               key={`${todo?._id}-${tag}`}
-              className="rounded-full bg-emberSoft px-2.5 py-1 text-xs text-ink"
+              className="rounded-full bg-[#d7efe9] px-2.5 py-1 text-xs text-ink"
             >
               #{tag}
             </span>
@@ -76,7 +83,7 @@ export default function TodoItem({
           value={status}
           onChange={(event) => onStatusChange(todo, event.target.value)}
           disabled={actionsDisabled}
-          className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+          className="rounded-xl border border-border bg-[#f2f8fd] px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
         >
           {statusOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -86,7 +93,7 @@ export default function TodoItem({
         </select>
         <button
           type="button"
-          className="text-sm text-bark transition hover:text-ink"
+          className="text-sm font-medium text-bark transition hover:text-ink"
           onClick={() => onDelete(todo)}
         >
           Delete

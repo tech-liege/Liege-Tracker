@@ -7,11 +7,16 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
-      lowercase: true
+      lowercase: true,
     },
-    passwordHash: { type: String, required: true }
+    passwordHash: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
+    verifyAccountTokenHash: { type: String },
+    verifyAccountExpiresAt: { type: Date },
+    resetPasswordTokenHash: { type: String },
+    resetPasswordExpiresAt: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("User", userSchema);

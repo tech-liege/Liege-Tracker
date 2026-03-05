@@ -6,21 +6,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  createTodo,
-  fetchMe,
-  getStoredToken,
-  loginUser,
-  registerUser,
-  storeToken,
-} from "../api";
-import {
-  getGuestSessionToken,
-  getGuestUser,
-  isGuestToken,
-  loadGuestTodos,
-  saveGuestTodos,
-} from "../utils/guestSession";
+import { createTodo, fetchMe, getStoredToken, loginUser, registerUser, storeToken } from "@/api";
+import { getGuestSessionToken, getGuestUser, isGuestToken, loadGuestTodos, saveGuestTodos } from "@/utils/guestSession";
 
 const SessionContext = createContext(null);
 
@@ -96,10 +83,12 @@ export function SessionProvider({ children }) {
     return { ...data, pendingGuestSync: false };
   }
 
-  async function register(email, password) {
-    const data = await registerUser(email, password);
-    storeToken(data.token);
-    setSession({ token: data.token, user: data.user });
+  async function register(email, password, confirmPassword) {
+    const data = await registerUser(email, password, confirmPassword);
+    if (data?.token && data?.user) {
+      storeToken(data.token);
+      setSession({ token: data.token, user: data.user });
+    }
     return data;
   }
 

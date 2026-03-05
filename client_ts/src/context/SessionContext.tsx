@@ -15,7 +15,7 @@ import {
   registerUser,
   storeToken,
 } from "../api";
-import type { Session, Todo, User } from "../types";
+import type { RegistrationResponse, Session, Todo, User } from "../types";
 import {
   getGuestSessionToken,
   getGuestUser,
@@ -35,7 +35,7 @@ type SessionContextValue = {
   pendingGuestSync: PendingGuestSync | null;
   checkingSession: boolean;
   login: (email?: string, password?: string) => Promise<Session>;
-  register: (email: string, password: string) => Promise<Session>;
+  register: (email: string, password: string) => Promise<RegistrationResponse>;
   logout: () => void;
   continueAsGuest: () => Session;
   resolveGuestTodoSync: (shouldSync: boolean) => Promise<void>;
@@ -118,12 +118,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return nextSession;
   }
 
-  async function register(email: string, password: string): Promise<Session> {
+  async function register(
+    email: string,
+    password: string,
+  ): Promise<RegistrationResponse> {
     const data = await registerUser(email, password);
-    const nextSession: Session = { token: data.token, user: data.user };
-    storeToken(data.token);
-    setSession(nextSession);
-    return nextSession;
+    if (data?.token && data?.user) {
+      const nextSession: Session = { token: data.token, user: data.user };
+      storeToken(data.token);
+      setSession(nextSession);
+    }
+    return data;
   }
 
   function logout() {

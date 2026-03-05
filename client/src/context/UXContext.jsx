@@ -31,7 +31,7 @@ export function UXProvider({ children }) {
 export function useUX() {
   const context = useContext(UXContext);
   if (!context) {
-    throw new Error("useUX must be used within LayoutProvider");
+    throw new Error("useUX must be used within UXProvider");
   }
   return context;
 }

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { fetchRoadmaps, fetchTodos } from "../../api";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
-import { isGuestSession, loadGuestTodos } from "../../utils/guestSession";
-import functions from "../../func";
+import { Navigate } from "react-router-dom";
+import { fetchRoadmaps, fetchTodos } from "@/api";
+import { BoltIcon, ClockIcon, DashboardIcon, MailIcon, RoadmapIcon, Section, SettingsIcon, TasksIcon } from "@/components/ui";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
+import { isGuestSession, loadGuestTodos } from "@/utils/guestSession";
+import { tasks } from "@/func";
 import MetricCard from "./components/MetricCard";
 import ActionCard from "./components/ActionCard";
 
-const { tasks } = functions;
 const { normalize } = tasks;
 
 export default function DashboardPage() {
@@ -126,9 +126,9 @@ export default function DashboardPage() {
 
   if (checkingSession) {
     return (
-      <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
+      <Section>
         <p className="text-sm text-bark">Checking session...</p>
-      </section>
+      </Section>
     );
   }
 
@@ -137,53 +137,52 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
-          Liege-Tracker
+    <div className="flex flex-col gap-5">
+      <Section className="ui-enter bg-white/95 sm:p-7">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-bark">
+          <DashboardIcon className="h-4 w-4" />
+          Dashboard
         </p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
-          Build momentum every day.
-        </h1>
-        <p className="mt-2 text-sm text-bark">
+        <h1 className="mt-2 text-[1.9rem] font-semibold leading-tight text-ink sm:text-[2.2rem]">Execution at a glance.</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-bark">
           {isGuestUser
-            ? "You are in guest mode. Todos stay on this device and AI roadmap generation is disabled."
-            : "Use AI roadmaps to generate structured plans, then execute in the Tasks board."}
+            ? "Guest mode is active. Tasks stay on this device and roadmap AI is unavailable."
+            : "Track delivery progress and jump directly into roadmaps, tasks, and settings."}
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <MetricCard
             label="Tasks"
             value={stats.totalTasks}
             detail={`${stats.todoCount} to do`}
+            icon={TasksIcon}
+            className="ui-stagger-base ui-stagger-1"
           />
           <MetricCard
             label="In Progress"
             value={stats.inProgress}
             detail={`${stats.done} completed`}
+            icon={BoltIcon}
+            className="ui-stagger-base ui-stagger-2"
           />
-          <MetricCard
-            label="Overdue"
-            value={stats.overdue}
-            detail="Needs attention"
-          />
-          <MetricCard
-            label="Roadmaps"
-            value={stats.roadmaps}
-            detail="Saved strategy"
-          />
+          <MetricCard label="Overdue" value={stats.overdue} detail="Needs attention" icon={ClockIcon} className="ui-stagger-base ui-stagger-3" />
+          <MetricCard label="Roadmaps" value={stats.roadmaps} detail="Saved strategy" icon={RoadmapIcon} className="ui-stagger-base ui-stagger-4" />
           <MetricCard
             label="Session"
             value={isGuestUser ? "Guest" : "User"}
             detail={session.user.email}
+            icon={MailIcon}
+            className="ui-stagger-base ui-stagger-5"
           />
           <MetricCard
             label="Focus"
             value={error ? "Blocked" : loading ? "Syncing" : "Ready"}
             detail="System status"
+            icon={BoltIcon}
+            className="ui-stagger-base ui-stagger-6"
           />
         </div>
-      </header>
+      </Section>
 
       <section className="ui-enter-delayed grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ActionCard
@@ -193,26 +192,28 @@ export default function DashboardPage() {
           to="/roadmaps"
           disabled={isGuestUser}
           helper={isGuestUser ? "Disabled in guest mode" : null}
+          icon={RoadmapIcon}
+          className="ui-stagger-base ui-stagger-2"
         />
         <ActionCard
           title="Tasks"
           description="Manage work with statuses, priorities, deadlines, and tags."
           cta="Open Tasks"
           to="/tasks"
+          icon={TasksIcon}
+          className="ui-stagger-base ui-stagger-3"
         />
         <ActionCard
           title="Settings"
           description="Manage session and review account mode details."
           cta="Open Settings"
           to="/settings"
+          icon={SettingsIcon}
+          className="ui-stagger-base ui-stagger-4"
         />
       </section>
 
-      {error ? (
-        <section className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">
-          {error}
-        </section>
-      ) : null}
+      {error ? <section className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</section> : null}
     </div>
   );
 }

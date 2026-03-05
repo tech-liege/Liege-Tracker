@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
 
 const routeLabels: Record<string, string> = {
   "/": "Redirecting",

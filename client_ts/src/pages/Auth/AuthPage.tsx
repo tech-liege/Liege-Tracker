@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
+import { requestAccountVerification } from "@/api";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
 
 const authModes = ["login", "register"] as const;
 
@@ -18,7 +19,9 @@ export default function AuthPage() {
   const { setStatus } = useLayout();
   const [authMode, setAuthMode] = useState<(typeof authModes)[number]>("login");
   const [authBusy, setAuthBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const waitingForGuestSync = Boolean(pendingGuestSync);
@@ -54,9 +57,17 @@ export default function AuthPage() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError(null);
+    setAuthMessage(null);
     try {
-      const action = authMode === "login" ? login : register;
-      await action(email, password);
+      if (authMode === "login") {
+        await login(email, password);
+      } else {
+        const response = await register(email, password);
+        setAuthMessage(
+          response?.message || "Account created. Check your email to verify your account.",
+        );
+        setAuthMode("login");
+      }
       setEmail("");
       setPassword("");
     } catch (err) {
@@ -87,6 +98,27 @@ export default function AuthPage() {
       setAuthError((err as Error).message);
     } finally {
       setAuthBusy(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    if (!email.trim()) {
+      setAuthError("Enter your email first.");
+      return;
+    }
+
+    setResendBusy(true);
+    setAuthError(null);
+    setAuthMessage(null);
+    try {
+      const response = await requestAccountVerification(email);
+      setAuthMessage(
+        response?.message || "If an account exists and is unverified, a verification email has been sent.",
+      );
+    } catch (err) {
+      setAuthError((err as Error).message);
+    } finally {
+      setResendBusy(false);
     }
   }
 
@@ -131,6 +163,7 @@ export default function AuthPage() {
               onClick={() => {
                 setAuthMode(mode);
                 setAuthError(null);
+                setAuthMessage(null);
               }}
             >
               {mode === "login" ? "Sign in" : "Register"}
@@ -148,7 +181,7 @@ export default function AuthPage() {
           placeholder="Email address"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          disabled={authBusy || waitingForGuestSync}
+          disabled={authBusy || resendBusy || waitingForGuestSync}
           className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
         />
         <input
@@ -156,28 +189,41 @@ export default function AuthPage() {
           placeholder="Password (min 8 characters)"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          disabled={authBusy || waitingForGuestSync}
+          disabled={authBusy || resendBusy || waitingForGuestSync}
           className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
         />
         <button
           type="submit"
-          disabled={authBusy || waitingForGuestSync}
+          disabled={authBusy || resendBusy || waitingForGuestSync}
           className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {authMode === "login" ? "Sign in" : "Register"}
         </button>
       </form>
+      {authMode === "login" ? (
+        <button
+          type="button"
+          className="mx-auto mt-3 block text-xs font-semibold text-ink underline"
+          onClick={handleResendVerification}
+          disabled={authBusy || resendBusy || waitingForGuestSync}
+        >
+          {resendBusy ? "Sending..." : "Resend verification email"}
+        </button>
+      ) : null}
       <button
         type="button"
         className="mx-auto mt-4 block text-sm font-medium text-ink underline"
         onClick={toGuest}
-        disabled={authBusy || waitingForGuestSync}
+        disabled={authBusy || resendBusy || waitingForGuestSync}
       >
         Continue as Guest
       </button>
 
       {authError ? (
         <p className="mt-4 text-sm text-red-700">{authError}</p>
+      ) : null}
+      {authMessage ? (
+        <p className="mt-4 text-sm text-emerald-700">{authMessage}</p>
       ) : null}
 
       {waitingForGuestSync ? (

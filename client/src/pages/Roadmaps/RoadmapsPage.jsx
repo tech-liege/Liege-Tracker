@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import {
-  createRoadmapFromPlan,
-  fetchRoadmaps,
-  previewRoadmapFromGoal,
-} from "../../api";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
-import { isGuestSession } from "../../utils/guestSession";
-import functions from "../../func";
+import { createRoadmapFromPlan, fetchRoadmaps, previewRoadmapFromGoal } from "@/api";
+import { BoltIcon, Button, Field, ListIcon, PlusIcon, RoadmapIcon, Section, SparkIcon } from "@/components/ui";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
+import { tasks } from "@/func";
+import { isGuestSession } from "@/utils/guestSession";
 
-const { tasks } = functions;
 const { normalize } = tasks;
+
+const inputClass =
+  "w-full rounded-xl border border-border bg-[#f2f8fd] px-3 py-2.5 text-sm text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30";
+const selectClass =
+  "w-full rounded-xl border border-border bg-[#f2f8fd] px-3 py-2.5 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30";
+const textareaClass =
+  "w-full rounded-xl border border-border bg-[#f2f8fd] px-4 py-2.5 text-sm text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30";
 
 function emptyTodo() {
   return { text: "", dueDate: "", priority: "medium", tags: [] };
@@ -177,9 +180,11 @@ export default function RoadmapsPage() {
       const createdTodos = Array.isArray(payload?.todos)
         ? payload.todos.length
         : 0;
+
       if (createdRoadmap) {
         setRoadmaps((prev) => [createdRoadmap, ...prev]);
       }
+
       setSuccess(`Roadmap saved and ${createdTodos} todos created.`);
       setDraft(null);
       setGoal("");
@@ -224,10 +229,7 @@ export default function RoadmapsPage() {
   function addMilestone() {
     updateDraft((previous) => ({
       ...previous,
-      milestones: [
-        ...previous.milestones,
-        emptyMilestone(previous.milestones.length),
-      ],
+      milestones: [...previous.milestones, emptyMilestone(previous.milestones.length)],
     }));
   }
 
@@ -236,9 +238,7 @@ export default function RoadmapsPage() {
       if (previous.milestones.length <= 1) return previous;
       return {
         ...previous,
-        milestones: previous.milestones.filter(
-          (_, index) => index !== milestoneIndex,
-        ),
+        milestones: previous.milestones.filter((_, index) => index !== milestoneIndex),
       };
     });
   }
@@ -275,9 +275,9 @@ export default function RoadmapsPage() {
 
   if (checkingSession) {
     return (
-      <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
+      <Section>
         <p className="text-sm text-bark">Checking session...</p>
-      </section>
+      </Section>
     );
   }
 
@@ -286,57 +286,46 @@ export default function RoadmapsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="ui-enter rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-bark">
-          Strategy
+    <div className="flex flex-col gap-5">
+      <Section className="ui-enter bg-white/95 sm:p-7">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-bark">
+          <RoadmapIcon className="h-4 w-4" />
+          Roadmaps
         </p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink sm:text-4xl">
-          Roadmap Generator
-        </h1>
-        <p className="mt-2 text-sm text-bark">
-          Define a goal, review the AI plan, edit details, then confirm to
-          create todos.
+        <h1 className="mt-2 text-[1.9rem] font-semibold leading-tight text-ink sm:text-[2.2rem]">Strategy Builder</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-bark">
+          Generate a plan from a goal, refine milestones and todo details, then create roadmap + tasks in one action.
         </p>
-      </header>
+      </Section>
 
-      <section className="ui-enter-delayed rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
+      <Section className="ui-enter-delayed bg-white/95 sm:p-7">
         {isGuestUser ? (
-          <div className="rounded-2xl border border-border bg-sand p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-bark">
+          <div className="rounded-2xl border border-border bg-[#e6f1fa] p-5">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-bark">
+              <SparkIcon className="h-4 w-4" />
               Guest mode
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">
-              AI roadmap is disabled for guests.
-            </h2>
-            <p className="mt-2 text-sm text-bark">
-              Sign in with an account to preview and create AI roadmaps.
-            </p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">AI roadmap generation is unavailable.</h2>
+            <p className="mt-2 text-sm text-bark">Sign in with an account to preview and create AI roadmaps.</p>
           </div>
         ) : (
           <>
-            <form
-              onSubmit={handlePreview}
-              className="grid gap-3 sm:grid-cols-[1fr_auto]"
-            >
-              <input
+            <form onSubmit={handlePreview} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+              <Field
                 type="text"
                 value={goal}
                 onChange={(event) => setGoal(event.target.value)}
                 placeholder="Example: launch beta in 8 weeks with onboarding and analytics"
-                className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                className="text-base"
               />
-              <button
-                type="submit"
-                disabled={previewBusy}
-                className="rounded-2xl bg-ink px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-              >
+              <Button type="submit" disabled={previewBusy} className="min-h-[48px]">
+                <SparkIcon className="h-4 w-4" />
                 {previewBusy ? "Generating..." : "Preview plan"}
-              </button>
+              </Button>
             </form>
 
             {draft ? (
-              <div className="mt-6 rounded-2xl border border-border bg-sand/70 p-4 sm:p-5">
+              <div className="mt-6 space-y-4 rounded-2xl border border-border bg-[#edf5fc] p-4 sm:p-5">
                 <div className="grid gap-3">
                   <input
                     type="text"
@@ -347,7 +336,7 @@ export default function RoadmapsPage() {
                         title: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                    className={inputClass}
                   />
                   <textarea
                     value={draft.summary}
@@ -358,24 +347,22 @@ export default function RoadmapsPage() {
                       }))
                     }
                     rows={3}
-                    className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                    className={textareaClass}
                     placeholder="Roadmap summary"
                   />
                 </div>
 
-                <div className="mt-5 grid gap-4">
+                <div className="space-y-4">
                   {draft.milestones.map((milestone, milestoneIndex) => (
                     <article
                       key={`milestone-${milestoneIndex}`}
-                      className="rounded-2xl border border-border bg-white p-4"
+                      className={`rounded-2xl border border-border bg-white p-4 ui-stagger-base ui-stagger-${(milestoneIndex % 6) + 1}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-bark">
-                          Milestone {milestoneIndex + 1}
-                        </h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-bark">Milestone {milestoneIndex + 1}</h3>
                         <button
                           type="button"
-                          className="text-xs text-bark underline"
+                          className="text-xs font-semibold text-bark underline hover:text-ink"
                           onClick={() => removeMilestone(milestoneIndex)}
                         >
                           Remove milestone
@@ -386,99 +373,54 @@ export default function RoadmapsPage() {
                         <input
                           type="text"
                           value={milestone.title}
-                          onChange={(event) =>
-                            updateMilestoneField(
-                              milestoneIndex,
-                              "title",
-                              event.target.value,
-                            )
-                          }
+                          onChange={(event) => updateMilestoneField(milestoneIndex, "title", event.target.value)}
                           placeholder="Milestone title"
-                          className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                          className={inputClass}
                         />
                         <input
                           type="text"
                           value={milestone.description}
-                          onChange={(event) =>
-                            updateMilestoneField(
-                              milestoneIndex,
-                              "description",
-                              event.target.value,
-                            )
-                          }
+                          onChange={(event) => updateMilestoneField(milestoneIndex, "description", event.target.value)}
                           placeholder="Milestone description"
-                          className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                          className={inputClass}
                         />
                         <input
                           type="date"
                           value={milestone.startDate}
-                          onChange={(event) =>
-                            updateMilestoneField(
-                              milestoneIndex,
-                              "startDate",
-                              event.target.value,
-                            )
-                          }
-                          className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                          onChange={(event) => updateMilestoneField(milestoneIndex, "startDate", event.target.value)}
+                          className={inputClass}
                         />
                         <input
                           type="date"
                           value={milestone.endDate}
-                          onChange={(event) =>
-                            updateMilestoneField(
-                              milestoneIndex,
-                              "endDate",
-                              event.target.value,
-                            )
-                          }
-                          className="w-full rounded-xl border border-border bg-sand px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                          onChange={(event) => updateMilestoneField(milestoneIndex, "endDate", event.target.value)}
+                          className={inputClass}
                         />
                       </div>
 
-                      <div className="mt-4 grid gap-3">
+                      <div className="mt-4 space-y-3">
                         {milestone.todos.map((todo, todoIndex) => (
                           <div
                             key={`milestone-${milestoneIndex}-todo-${todoIndex}`}
-                            className="grid gap-2 rounded-xl border border-border bg-sand p-3 lg:grid-cols-[1fr_170px_150px_1fr_auto]"
+                            className="grid gap-2 rounded-xl border border-border bg-[#f2f8fd] p-3 lg:grid-cols-[1fr_170px_150px_1fr_auto]"
                           >
                             <input
                               type="text"
                               value={todo.text}
-                              onChange={(event) =>
-                                updateTodoField(
-                                  milestoneIndex,
-                                  todoIndex,
-                                  "text",
-                                  event.target.value,
-                                )
-                              }
+                              onChange={(event) => updateTodoField(milestoneIndex, todoIndex, "text", event.target.value)}
                               placeholder="Todo text"
-                              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                              className={inputClass}
                             />
                             <input
                               type="date"
                               value={todo.dueDate}
-                              onChange={(event) =>
-                                updateTodoField(
-                                  milestoneIndex,
-                                  todoIndex,
-                                  "dueDate",
-                                  event.target.value,
-                                )
-                              }
-                              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                              onChange={(event) => updateTodoField(milestoneIndex, todoIndex, "dueDate", event.target.value)}
+                              className={inputClass}
                             />
                             <select
                               value={todo.priority}
-                              onChange={(event) =>
-                                updateTodoField(
-                                  milestoneIndex,
-                                  todoIndex,
-                                  "priority",
-                                  event.target.value,
-                                )
-                              }
-                              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                              onChange={(event) => updateTodoField(milestoneIndex, todoIndex, "priority", event.target.value)}
+                              className={selectClass}
                             >
                               <option value="high">High</option>
                               <option value="medium">Medium</option>
@@ -487,23 +429,14 @@ export default function RoadmapsPage() {
                             <input
                               type="text"
                               value={todo.tags.join(", ")}
-                              onChange={(event) =>
-                                updateTodoField(
-                                  milestoneIndex,
-                                  todoIndex,
-                                  "tags",
-                                  normalize.tags(event.target.value.split(",")),
-                                )
-                              }
+                              onChange={(event) => updateTodoField(milestoneIndex, todoIndex, "tags", normalize.tags(event.target.value.split(",")))}
                               placeholder="tags, comma, separated"
-                              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
+                              className={inputClass}
                             />
                             <button
                               type="button"
-                              className="text-xs text-bark underline"
-                              onClick={() =>
-                                removeTodo(milestoneIndex, todoIndex)
-                              }
+                              className="text-xs font-semibold text-bark underline hover:text-ink"
+                              onClick={() => removeTodo(milestoneIndex, todoIndex)}
                             >
                               Remove
                             </button>
@@ -511,97 +444,73 @@ export default function RoadmapsPage() {
                         ))}
                       </div>
 
-                      <button
-                        type="button"
-                        className="mt-3 rounded-full border border-border px-3 py-1 text-xs text-ink transition hover:border-ember/70"
-                        onClick={() => addTodo(milestoneIndex)}
-                      >
+                      <Button type="button" variant="secondary" className="mt-3 px-3 py-1.5 text-xs" onClick={() => addTodo(milestoneIndex)}>
+                        <PlusIcon className="h-4 w-4" />
                         Add todo
-                      </button>
+                      </Button>
                     </article>
                   ))}
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    className="rounded-full border border-border px-4 py-2 text-sm text-ink transition hover:border-ember/70"
-                    onClick={addMilestone}
-                  >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" variant="secondary" onClick={addMilestone}>
+                    <PlusIcon className="h-4 w-4" />
                     Add milestone
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateRoadmap}
-                    disabled={createBusy}
-                    className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {createBusy
-                      ? "Saving..."
-                      : `Create roadmap + ${draftTaskCount} todos`}
-                  </button>
+                  </Button>
+                  <Button type="button" onClick={handleCreateRoadmap} disabled={createBusy}>
+                    <RoadmapIcon className="h-4 w-4" />
+                    {createBusy ? "Saving..." : `Create roadmap + ${draftTaskCount} todos`}
+                  </Button>
                 </div>
               </div>
             ) : null}
           </>
         )}
 
-        {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
-        {success ? (
-          <p className="mt-4 text-sm text-emerald-700">{success}</p>
-        ) : null}
-      </section>
+        {error ? <p className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+        {success ? <p className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
+      </Section>
 
-      <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
+      <Section className="bg-white/95 sm:p-7">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-ink">Saved Roadmaps</h2>
+          <h2 className="inline-flex items-center gap-2 text-xl font-semibold text-ink">
+            <ListIcon className="h-5 w-5" />
+            Saved Roadmaps
+          </h2>
           <span className="text-sm text-bark">{roadmaps.length} total</span>
         </div>
 
         {isGuestUser ? (
-          <p className="mt-4 text-sm text-bark">
-            No cloud roadmaps are available in guest mode.
-          </p>
+          <p className="mt-4 rounded-xl bg-[#e6f1fa] px-4 py-3 text-sm text-bark">No cloud roadmaps are available in guest mode.</p>
         ) : loadingRoadmaps ? (
           <p className="mt-4 text-sm text-bark">Loading roadmaps...</p>
         ) : roadmaps.length === 0 ? (
-          <p className="mt-4 text-sm text-bark">
-            No roadmaps yet. Generate your first plan above.
-          </p>
+          <p className="mt-4 rounded-xl bg-[#e6f1fa] px-4 py-3 text-sm text-bark">No roadmaps yet. Generate your first plan above.</p>
         ) : (
           <ul className="mt-4 grid gap-3">
             {roadmaps.map((roadmap, index) => (
               <li
                 key={roadmap?._id || `roadmap-${index}`}
-                className="rounded-2xl border border-border bg-sand p-4"
+                className={`rounded-2xl border border-border bg-white p-4 ui-stagger-base ui-stagger-${(index % 6) + 1}`}
               >
-                <p className="text-sm font-semibold text-ink">
-                  {roadmap.title}
-                </p>
-                {roadmap.summary ? (
-                  <p className="mt-1 text-sm text-bark">{roadmap.summary}</p>
-                ) : null}
-                <p className="mt-2 text-xs uppercase tracking-[0.18em] text-bark">
-                  {Array.isArray(roadmap.milestones)
-                    ? roadmap.milestones.length
-                    : 0}{" "}
-                  milestones
+                <p className="text-base font-semibold leading-tight text-ink">{roadmap.title}</p>
+                {roadmap.summary ? <p className="mt-1.5 text-sm leading-relaxed text-bark">{roadmap.summary}</p> : null}
+                <p className="mt-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-bark">
+                  <BoltIcon className="h-4 w-4" />
+                  {Array.isArray(roadmap.milestones) ? roadmap.milestones.length : 0} milestones
                   {roadmap.createdAt
-                    ? ` • ${new Date(roadmap.createdAt).toLocaleDateString(
-                        undefined,
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        },
-                      )}`
+                    ? ` • ${new Date(roadmap.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}`
                     : ""}
                 </p>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Section>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { UXProvider } from "./context/UXContext";
 import { SessionProvider, useSession } from "./context/SessionContext";
 import AppLayout from "./layouts/AppLayout";
 import AuthPage from "./pages/Auth/AuthPage";
+import VerifyAccountPage from "./pages/Auth/VerifyAccountPage";
 import HomePage from "./pages/Home/HomePage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import NotFoundPage from "./pages/NotFound/NotFoundPage";
@@ -40,6 +41,7 @@ export default function App() {
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="auth" element={<AuthPage />} />
+                <Route path="auth/verify-account" element={<VerifyAccountPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>

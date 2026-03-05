@@ -9,9 +9,11 @@ Full-stack todo tracker.
 ## Setup
 
 ### Server
-1. Copy env file and set MongoDB connection:
+1. Copy env file and set values:
    - `cp server/.env.example server/.env`
-   - Add `JWT_SECRET`
+   - Required auth vars: `JWT_SECRET`, `APP_BASE_URL`
+   - Required reset-email vars: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_FROM`
+   - Optional email auth vars (depends on provider): `SMTP_USER`, `SMTP_PASS`
    - Add `OPENAI_API_KEY` (required for AI roadmap generation)
 2. Install deps and run:
    - `cd server`

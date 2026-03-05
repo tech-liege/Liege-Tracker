@@ -1,33 +1,37 @@
 import { NavLink } from "react-router-dom";
-import { useSession } from "../../context/SessionContext";
+import {
+  DashboardIcon,
+  RoadmapIcon,
+  SettingsIcon,
+  TasksIcon,
+} from "../ui/icons";
 
-const authenticatedNavItems = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/roadmaps", label: "Roadmaps" },
-  { to: "/tasks", label: "Tasks" },
-  { to: "/settings", label: "Settings" },
+const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: DashboardIcon },
+  { to: "/roadmaps", label: "Roadmaps", icon: RoadmapIcon },
+  { to: "/tasks", label: "Tasks", icon: TasksIcon },
+  { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
-const unauthenticatedNavItems = [{ to: "/auth", label: "Authentication" }];
 
 export default function MobileNav() {
-  const { session } = useSession();
-  const navItems = session ? authenticatedNavItems : unauthenticatedNavItems;
-
   return (
-    <nav className="flex flex-wrap sticky top-2 z-50 items-center gap-2 rounded-2xl border border-border bg-white/80 px-4 py-3 text-sm font-semibold shadow-soft backdrop-blur-[2px] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 gap-1 border-t border-border bg-sand/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 text-xs font-semibold shadow-soft lg:hidden">
       {navItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) =>
-            `rounded-full px-3 py-1 transition ${
+            `rounded-xl px-2 py-2 transition ${
               isActive
-                ? "bg-emberSoft text-ink"
-                : "text-bark hover:bg-emberSoft/60 hover:text-ink"
+                ? "bg-ember text-white"
+                : "text-bark hover:bg-clay hover:text-ink"
             }`
           }
         >
-          {item.label}
+          <span className="flex flex-col items-center gap-1">
+            <item.icon className="h-4 w-4" />
+            <span className="text-[11px] leading-none">{item.label}</span>
+          </span>
         </NavLink>
       ))}
     </nav>

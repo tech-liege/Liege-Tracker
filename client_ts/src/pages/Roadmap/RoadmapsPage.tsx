@@ -1,22 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import {
-  createRoadmapFromPlan,
-  fetchRoadmaps,
-  previewRoadmapFromGoal,
-} from "../../api";
-import { useLayout } from "../../context/LayoutContext";
-import { useSession } from "../../context/SessionContext";
-import { isGuestSession } from "../../utils/guestSession";
-import type {
-  Roadmap,
-  DraftTodo,
-  DraftMilestone,
-  DraftPlan,
-} from "../../types";
-import functions from "../../func";
+import { createRoadmapFromPlan, fetchRoadmaps, previewRoadmapFromGoal } from "@/api";
+import { useLayout } from "@/context/LayoutContext";
+import { useSession } from "@/context/SessionContext";
+import { isGuestSession } from "@/utils/guestSession";
+import type { Roadmap, DraftTodo, DraftMilestone, DraftPlan } from "@/types";
+import { tasks } from "@/func";
 
-const { tasks } = functions;
 const { normalize } = tasks;
 
 function emptyTodo(): DraftTodo {
