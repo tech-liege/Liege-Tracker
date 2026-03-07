@@ -15,6 +15,7 @@ import SettingsPage from "./pages/Settings/SettingsPage";
 import TasksPage from "./pages/Tasks/TasksPage";
 import RequireAuth from "./routes/RequireAuth";
 import RequireGuest from "./routes/RequireGuest";
+import RequireVerified from "./routes/RequireVerified";
 
 function RootRedirect() {
   const { session, checkingSession } = useSession();
@@ -27,7 +28,11 @@ function RootRedirect() {
     );
   }
 
-  return <Navigate to={session ? "/dashboard" : "/home"} replace />;
+  if (!session) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <Navigate to={session.user?.isVerified === false ? "/settings" : "/dashboard"} replace />;
 }
 
 export default function App() {
@@ -53,10 +58,12 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route element={<AuthedProviders />}>
               <Route element={<AuthedLayout />}>
-                <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="roadmaps" element={<RoadmapsPage />} />
-                <Route path="tasks" element={<TasksPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route element={<RequireVerified />}>
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="roadmaps" element={<RoadmapsPage />} />
+                  <Route path="tasks" element={<TasksPage />} />
+                </Route>
               </Route>
             </Route>
           </Route>

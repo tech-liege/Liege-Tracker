@@ -1,22 +1,76 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { requestAccountVerification } from "@/api";
 import { BoltIcon, Button, Field, SparkIcon, TasksIcon, UserIcon } from "@/components/ui";
 import { useSession } from "@/context/SessionContext";
+import { loadGoogleIdentityScript } from "@/utils/googleIdentity";
 
 const authModes = ["login", "register"];
 
 export default function AuthPage() {
-  const { session, pendingGuestSync, checkingSession, login, register, continueAsGuest, resolveGuestTodoSync } = useSession();
+  const { session, pendingGuestSync, checkingSession, login, googleSignIn, register, continueAsGuest, resolveGuestTodoSync } = useSession();
+  const googleButtonRef = useRef(null);
+  const googleClientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+  const googleEnabled = Boolean(googleClientId);
   const [authMode, setAuthMode] = useState("login");
   const [authBusy, setAuthBusy] = useState(false);
-  const [resendBusy, setResendBusy] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authMessage, setAuthMessage] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const waitingForGuestSync = Boolean(pendingGuestSync);
+
+  useEffect(() => {
+    if (!googleEnabled || !googleButtonRef.current) return;
+
+    let cancelled = false;
+
+    loadGoogleIdentityScript()
+      .then((google) => {
+        if (cancelled || !googleButtonRef.current) return;
+
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: async (response) => {
+            const credential = String(response?.credential || "").trim();
+            if (!credential) {
+              setAuthError("Google sign-in failed. Please try again.");
+              return;
+            }
+
+            setAuthBusy(true);
+            setAuthError(null);
+            setAuthMessage(null);
+            try {
+              await googleSignIn(credential);
+            } catch (err) {
+              setAuthError(err.message);
+            } finally {
+              setAuthBusy(false);
+            }
+          },
+        });
+
+        googleButtonRef.current.innerHTML = "";
+        google.accounts.id.renderButton(googleButtonRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "pill",
+          width: Math.min(360, googleButtonRef.current.clientWidth || 280),
+        });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setAuthError(err.message || "Unable to load Google sign-in.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, googleEnabled, googleSignIn]);
 
   async function handleAuthSubmit(event) {
     event.preventDefault();
@@ -70,27 +124,6 @@ export default function AuthPage() {
     }
   }
 
-  async function handleResendVerification() {
-    if (!email.trim()) {
-      setAuthError("Enter your email first.");
-      return;
-    }
-
-    setResendBusy(true);
-    setAuthError(null);
-    setAuthMessage(null);
-    try {
-      const response = await requestAccountVerification(email);
-      setAuthMessage(
-        response?.message || "If an account exists and is unverified, a verification email has been sent.",
-      );
-    } catch (err) {
-      setAuthError(err.message);
-    } finally {
-      setResendBusy(false);
-    }
-  }
-
   if (checkingSession) {
     return (
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
@@ -100,7 +133,7 @@ export default function AuthPage() {
   }
 
   if (session) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={session.user?.isVerified === false ? "/settings" : "/dashboard"} replace />;
   }
 
   return (
@@ -170,14 +203,14 @@ export default function AuthPage() {
             placeholder="Email address"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            disabled={authBusy || resendBusy || waitingForGuestSync}
+            disabled={authBusy || waitingForGuestSync}
           />
           <Field
             type="password"
             placeholder="Password (min 8 characters)"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            disabled={authBusy || resendBusy || waitingForGuestSync}
+            disabled={authBusy || waitingForGuestSync}
           />
           {authMode === "register" ? (
             <Field
@@ -185,35 +218,41 @@ export default function AuthPage() {
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              disabled={authBusy || resendBusy || waitingForGuestSync}
+              disabled={authBusy || waitingForGuestSync}
             />
           ) : null}
           {authMode === "login" ? (
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                disabled={authBusy || resendBusy || waitingForGuestSync}
-                className="text-xs font-semibold text-bark underline transition hover:text-ember disabled:opacity-60"
-              >
-                {resendBusy ? "Sending..." : "Resend verification email"}
-              </button>
-              <Link to="/auth/forgot-password" className="text-xs font-semibold text-bark underline transition hover:text-ember">
-                Forgot password?
-              </Link>
-            </div>
+            <Link to="/auth/forgot-password" className="text-right text-xs font-semibold text-bark underline transition hover:text-ember">
+              Forgot password?
+            </Link>
           ) : null}
-          <Button type="submit" disabled={authBusy || resendBusy || waitingForGuestSync} className="mt-1 w-full justify-center py-3">
+          <Button type="submit" disabled={authBusy || waitingForGuestSync} className="mt-1 w-full justify-center py-3">
             <BoltIcon className="h-4 w-4" />
             {authMode === "login" ? "Sign in to Workspace" : "Create Account"}
           </Button>
         </form>
+
+        <div className="mt-4">
+          <div className="h-px bg-border" />
+          <div className="py-3">
+            {googleEnabled ? (
+              <div
+                ref={googleButtonRef}
+                className={`mx-auto w-full min-w-0 flex justify-center ${authBusy || waitingForGuestSync ? "pointer-events-none opacity-70" : ""}`}
+              />
+            ) : (
+              <p className="text-center text-xs text-bark">Google sign-in is not configured.</p>
+            )}
+          </div>
+          <div className="h-px bg-border" />
+        </div>
+
         <Button
           type="button"
           variant="ghost"
           className="mt-3 block w-full text-center"
           onClick={toGuest}
-          disabled={authBusy || resendBusy || waitingForGuestSync}
+          disabled={authBusy || waitingForGuestSync}
         >
           Continue as Guest
         </Button>

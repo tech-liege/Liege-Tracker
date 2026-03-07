@@ -1,5 +1,6 @@
 import { Router } from "express";
 import requireAuth from "../middleware/auth.js";
+import requireVerified from "../middleware/requireVerified.js";
 import Roadmap from "../models/Roadmap.js";
 import Todo from "../models/Todo.js";
 import {
@@ -200,7 +201,7 @@ async function createRoadmapWithTodos({ userId, goal, plan }) {
   return { roadmap, todos };
 }
 
-router.use(requireAuth);
+router.use(requireAuth, requireVerified);
 
 router.get("/", async (req, res, next) => {
   try {

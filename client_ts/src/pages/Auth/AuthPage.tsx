@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { requestAccountVerification } from "@/api";
 import { useLayout } from "@/context/LayoutContext";
 import { useSession } from "@/context/SessionContext";
+import { loadGoogleIdentityScript } from "@/utils/googleIdentity";
 
 const authModes = ["login", "register"] as const;
 
@@ -12,19 +12,74 @@ export default function AuthPage() {
     pendingGuestSync,
     checkingSession,
     login,
+    googleSignIn,
     register,
     continueAsGuest,
     resolveGuestTodoSync,
   } = useSession();
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+  const googleEnabled = Boolean(googleClientId);
   const { setStatus } = useLayout();
   const [authMode, setAuthMode] = useState<(typeof authModes)[number]>("login");
   const [authBusy, setAuthBusy] = useState(false);
-  const [resendBusy, setResendBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const waitingForGuestSync = Boolean(pendingGuestSync);
+
+  useEffect(() => {
+    if (!googleEnabled || !googleButtonRef.current) return;
+
+    let cancelled = false;
+
+    loadGoogleIdentityScript()
+      .then((google) => {
+        if (cancelled || !googleButtonRef.current || !google.accounts?.id) return;
+
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: async (response: { credential?: string }) => {
+            const credential = String(response?.credential || "").trim();
+            if (!credential) {
+              setAuthError("Google sign-in failed. Please try again.");
+              return;
+            }
+
+            setAuthBusy(true);
+            setAuthError(null);
+            setAuthMessage(null);
+            try {
+              await googleSignIn(credential);
+            } catch (err) {
+              setAuthError((err as Error).message);
+            } finally {
+              setAuthBusy(false);
+            }
+          },
+        });
+
+        googleButtonRef.current.innerHTML = "";
+        google.accounts.id.renderButton(googleButtonRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "pill",
+          width: Math.min(360, googleButtonRef.current.clientWidth || 280),
+        });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setAuthError((err as Error).message || "Unable to load Google sign-in.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, googleEnabled, googleSignIn]);
 
   useEffect(() => {
     if (checkingSession) {
@@ -101,27 +156,6 @@ export default function AuthPage() {
     }
   }
 
-  async function handleResendVerification() {
-    if (!email.trim()) {
-      setAuthError("Enter your email first.");
-      return;
-    }
-
-    setResendBusy(true);
-    setAuthError(null);
-    setAuthMessage(null);
-    try {
-      const response = await requestAccountVerification(email);
-      setAuthMessage(
-        response?.message || "If an account exists and is unverified, a verification email has been sent.",
-      );
-    } catch (err) {
-      setAuthError((err as Error).message);
-    } finally {
-      setResendBusy(false);
-    }
-  }
-
   if (checkingSession) {
     return (
       <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
@@ -131,7 +165,12 @@ export default function AuthPage() {
   }
 
   if (session) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate
+        to={session.user?.isVerified === false ? "/settings" : "/dashboard"}
+        replace
+      />
+    );
   }
 
   return (
@@ -181,7 +220,7 @@ export default function AuthPage() {
           placeholder="Email address"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          disabled={authBusy || resendBusy || waitingForGuestSync}
+          disabled={authBusy || waitingForGuestSync}
           className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
         />
         <input
@@ -189,32 +228,42 @@ export default function AuthPage() {
           placeholder="Password (min 8 characters)"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          disabled={authBusy || resendBusy || waitingForGuestSync}
+          disabled={authBusy || waitingForGuestSync}
           className="w-full rounded-2xl border border-border bg-sand px-4 py-3 text-base text-ink placeholder:text-bark focus:border-ember focus:outline-none focus:ring-2 focus:ring-ember/30"
         />
         <button
           type="submit"
-          disabled={authBusy || resendBusy || waitingForGuestSync}
+          disabled={authBusy || waitingForGuestSync}
           className="rounded-2xl bg-ember px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(217,115,66,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {authMode === "login" ? "Sign in" : "Register"}
         </button>
       </form>
-      {authMode === "login" ? (
-        <button
-          type="button"
-          className="mx-auto mt-3 block text-xs font-semibold text-ink underline"
-          onClick={handleResendVerification}
-          disabled={authBusy || resendBusy || waitingForGuestSync}
-        >
-          {resendBusy ? "Sending..." : "Resend verification email"}
-        </button>
-      ) : null}
+      <div className="mt-4">
+        <div className="h-px bg-border" />
+        <div className="py-3">
+          {googleEnabled ? (
+            <div
+              ref={googleButtonRef}
+              className={`flex justify-center ${
+                authBusy || waitingForGuestSync
+                  ? "mx-auto w-full min-w-0 pointer-events-none opacity-70"
+                  : "mx-auto w-full min-w-0"
+              }`}
+            />
+          ) : (
+            <p className="text-center text-xs text-bark">
+              Google sign-in is not configured.
+            </p>
+          )}
+        </div>
+        <div className="h-px bg-border" />
+      </div>
       <button
         type="button"
         className="mx-auto mt-4 block text-sm font-medium text-ink underline"
         onClick={toGuest}
-        disabled={authBusy || resendBusy || waitingForGuestSync}
+        disabled={authBusy || waitingForGuestSync}
       >
         Continue as Guest
       </button>

@@ -18,6 +18,15 @@ export async function loginUser(email, password) {
   return handleJson(res);
 }
 
+export async function loginWithGoogle(credential) {
+  const res = await fetch(toApiUrl("/auth/google"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  return handleJson(res);
+}
+
 export async function requestPasswordReset(email) {
   const res = await fetch(toApiUrl("/auth/password-reset/request"), {
     method: "POST",

@@ -123,10 +123,23 @@ export async function loginUser(
   return handleJson<AuthResponse>(res);
 }
 
-export async function verifyAccount(token: string): Promise<{ message?: string }> {
+export async function loginWithGoogle(
+  credential: string,
+): Promise<AuthResponse> {
+  const res = await fetch(toApiUrl("/auth/google"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  return handleJson<AuthResponse>(res);
+}
+
+export async function verifyAccount(
+  token: string,
+): Promise<{ message?: string; token?: string; user?: User }> {
   const params = new URLSearchParams({ token });
   const res = await fetch(toApiUrl(`/auth/verify-account?${params}`));
-  return handleJson<{ message?: string }>(res);
+  return handleJson<{ message?: string; token?: string; user?: User }>(res);
 }
 
 export async function requestAccountVerification(
@@ -141,7 +154,7 @@ export async function requestAccountVerification(
 }
 
 export async function fetchMe(): Promise<User> {
-  const res = await fetch(toApiUrl("/auth/me"), { headers: authHeaders() });
+  const res = await fetch(toApiUrl("/user/me"), { headers: authHeaders() });
   return handleJson<User>(res);
 }
 

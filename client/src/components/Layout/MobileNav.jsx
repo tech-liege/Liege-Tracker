@@ -5,6 +5,8 @@ import {
   SettingsIcon,
   TasksIcon,
 } from "../ui/icons";
+import { useSession } from "@/context/SessionContext";
+import { isGuestSession } from "@/utils/guestSession";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: DashboardIcon },
@@ -14,26 +16,45 @@ const navItems = [
 ];
 
 export default function MobileNav() {
+  const { session } = useSession();
+  const guestMode = isGuestSession(session);
+  const unverifiedMode = Boolean(session && !guestMode && session.user?.isVerified === false);
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 gap-1 border-t border-border bg-sand/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 text-xs font-semibold shadow-soft lg:hidden">
-      {navItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            `rounded-xl px-2 py-2 transition ${
-              isActive
-                ? "bg-ember text-white"
-                : "text-bark hover:bg-clay hover:text-ink"
-            }`
-          }
-        >
-          <span className="flex flex-col items-center gap-1">
-            <item.icon className="h-4 w-4" />
-            <span className="text-[11px] leading-none">{item.label}</span>
-          </span>
-        </NavLink>
-      ))}
+      {navItems.map((item) => {
+        const disabled = unverifiedMode && item.to !== "/settings";
+
+        if (disabled) {
+          return (
+            <div key={item.to} className="rounded-xl px-2 py-2 text-bark/60">
+              <span className="flex flex-col items-center gap-1">
+                <item.icon className="h-4 w-4" />
+                <span className="text-[11px] leading-none">{item.label}</span>
+              </span>
+            </div>
+          );
+        }
+
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `rounded-xl px-2 py-2 transition ${
+                isActive
+                  ? "bg-ember text-white"
+                  : "text-bark hover:bg-clay hover:text-ink"
+              }`
+            }
+          >
+            <span className="flex flex-col items-center gap-1">
+              <item.icon className="h-4 w-4" />
+              <span className="text-[11px] leading-none">{item.label}</span>
+            </span>
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }

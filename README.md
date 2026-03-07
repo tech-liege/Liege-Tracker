@@ -11,7 +11,7 @@ Full-stack todo tracker.
 ### Server
 1. Copy env file and set values:
    - `cp server/.env.example server/.env`
-   - Required auth vars: `JWT_SECRET`, `APP_BASE_URL`
+   - Required auth vars: `JWT_SECRET`, `APP_BASE_URL`, `GOOGLE_CLIENT_ID` (for Google sign-in)
    - Required reset-email vars: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_FROM`
    - Optional email auth vars (depends on provider): `SMTP_USER`, `SMTP_PASS`
    - Add `OPENAI_API_KEY` (required for AI roadmap generation)
@@ -27,6 +27,7 @@ Full-stack todo tracker.
    - `npm run dev`
 2. Optional API base override:
    - `VITE_API_BASE_URL=http://localhost:4000/api`
+   - `VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com`
 
 The client uses `/api` by default and Vite proxies it to `http://localhost:4000` in dev.
 

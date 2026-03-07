@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createTodo, fetchMe, getStoredToken, loginUser, registerUser, storeToken } from "@/api";
+import { createTodo, fetchMe, getStoredToken, loginUser, loginWithGoogle, registerUser, storeToken } from "@/api";
 import { getGuestSessionToken, getGuestUser, isGuestToken, loadGuestTodos, saveGuestTodos } from "@/utils/guestSession";
 
 const SessionContext = createContext(null);
@@ -61,12 +61,7 @@ export function SessionProvider({ children }) {
     return guestSession;
   }, []);
 
-  async function login(email = "", password = "") {
-    if (String(email).trim().toLowerCase() === "guest") {
-      return continueAsGuest();
-    }
-
-    const data = await loginUser(email, password);
+  function startAuthenticatedSession(data) {
     storeToken(data.token);
     const guestTodos = loadGuestTodos();
 
@@ -81,6 +76,20 @@ export function SessionProvider({ children }) {
 
     setSession({ token: data.token, user: data.user });
     return { ...data, pendingGuestSync: false };
+  }
+
+  async function login(email = "", password = "") {
+    if (String(email).trim().toLowerCase() === "guest") {
+      return continueAsGuest();
+    }
+
+    const data = await loginUser(email, password);
+    return startAuthenticatedSession(data);
+  }
+
+  async function googleSignIn(credential = "") {
+    const data = await loginWithGoogle(credential);
+    return startAuthenticatedSession(data);
   }
 
   async function register(email, password, confirmPassword) {
@@ -144,6 +153,7 @@ export function SessionProvider({ children }) {
       pendingGuestSync,
       checkingSession,
       login,
+      googleSignIn,
       register,
       logout,
       continueAsGuest,

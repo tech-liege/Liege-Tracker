@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Todo from "../models/Todo.js";
 import requireAuth from "../middleware/auth.js";
+import requireVerified from "../middleware/requireVerified.js";
 import {
   normalizePriority,
   normalizeStatus,
@@ -41,7 +42,7 @@ function parseTodoUpdates(body) {
   return updates;
 }
 
-router.use(requireAuth);
+router.use(requireAuth, requireVerified);
 
 router.get("/", async (req, res) => {
   const todos = await Todo.find({ user: req.userId }).sort({ createdAt: -1 });

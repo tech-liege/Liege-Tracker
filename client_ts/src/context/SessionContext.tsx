@@ -11,6 +11,7 @@ import {
   createTodo,
   fetchMe,
   getStoredToken,
+  loginWithGoogle,
   loginUser,
   registerUser,
   storeToken,
@@ -35,6 +36,7 @@ type SessionContextValue = {
   pendingGuestSync: PendingGuestSync | null;
   checkingSession: boolean;
   login: (email?: string, password?: string) => Promise<Session>;
+  googleSignIn: (credential: string) => Promise<Session>;
   register: (email: string, password: string) => Promise<RegistrationResponse>;
   logout: () => void;
   continueAsGuest: () => Session;
@@ -95,13 +97,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return guestSession;
   }, []);
 
-  async function login(email = "", password = ""): Promise<Session> {
-    if (String(email).trim().toLowerCase() === "guest") {
-      return continueAsGuest();
-    }
-
-    const data = await loginUser(email, password);
-    const nextSession: Session = { token: data.token, user: data.user };
+  function startAuthenticatedSession(data: Session) {
     storeToken(data.token);
 
     const guestTodos = loadGuestTodos();
@@ -111,11 +107,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         user: data.user,
         guestTodos,
       });
-      return nextSession;
+      return { token: data.token, user: data.user };
     }
 
-    setSession(nextSession);
-    return nextSession;
+    setSession({ token: data.token, user: data.user });
+    return { token: data.token, user: data.user };
+  }
+
+  async function login(email = "", password = ""): Promise<Session> {
+    if (String(email).trim().toLowerCase() === "guest") {
+      return continueAsGuest();
+    }
+
+    const data = await loginUser(email, password);
+    return startAuthenticatedSession({ token: data.token, user: data.user });
+  }
+
+  async function googleSignIn(credential: string): Promise<Session> {
+    const data = await loginWithGoogle(credential);
+    return startAuthenticatedSession({ token: data.token, user: data.user });
   }
 
   async function register(
@@ -188,6 +198,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       pendingGuestSync,
       checkingSession,
       login,
+      googleSignIn,
       register,
       logout,
       continueAsGuest,

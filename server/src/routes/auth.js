@@ -2,12 +2,14 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 import { sendPasswordResetEmail, sendRegisterEmail } from "../utils/mailer.js";
 
 const router = Router();
 const PASSWORD_RESET_WINDOW_MS = 15 * 60 * 1000;
 const VERIFY_ACCOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
+let googleClient = null;
 
 function signToken(userId) {
   const secret = process.env.JWT_SECRET;
@@ -47,6 +49,21 @@ function buildVerifyAccountUrl(token) {
   const url = new URL(`${appBaseUrl}/auth/verify-account`);
   url.searchParams.set("token", token);
   return url.toString();
+}
+
+function getGoogleClientId() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("Missing GOOGLE_CLIENT_ID.");
+  }
+  return clientId;
+}
+
+function getGoogleClient() {
+  if (!googleClient) {
+    googleClient = new OAuth2Client(getGoogleClientId());
+  }
+  return googleClient;
 }
 
 async function issueVerifyAccountEmail(user) {
@@ -121,10 +138,65 @@ router.post("/verify-account/request", async (req, res, next) => {
     const user = await User.findOne({ email });
     if (user && user.isVerified !== true) {
       await issueVerifyAccountEmail(user);
-    } 
+    }
 
     return res.json({
       message: "If an account exists and is unverified, a verification email has been sent.",
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post("/google", async (req, res, next) => {
+  try {
+    const credential = String(req.body.credential || "").trim();
+    if (!credential) {
+      return res.status(400).send("Google credential is required.");
+    }
+
+    const ticket = await getGoogleClient().verifyIdToken({
+      idToken: credential,
+      audience: getGoogleClientId(),
+    });
+    const payload = ticket.getPayload();
+
+    const email = normalizeEmail(payload?.email);
+    const googleId = String(payload?.sub || "").trim();
+    const emailVerified = Boolean(payload?.email_verified);
+
+    if (!email || !googleId || !emailVerified) {
+      return res.status(400).send("Unable to verify Google account.");
+    }
+
+    let user = await User.findOne({
+      $or: [{ googleId }, { email }],
+    });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        googleId,
+        authProvider: "google",
+        isVerified: true,
+      });
+    } else {
+      user.googleId = googleId;
+      user.isVerified = true;
+      if (!user.passwordHash) {
+        user.authProvider = "google";
+      }
+      await user.save();
+    }
+
+    const token = signToken(user._id.toString());
+    return res.json({
+      token,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        isVerified: user.isVerified !== false,
+      },
     });
   } catch (err) {
     return next(err);
@@ -144,8 +216,8 @@ router.post("/login", async (req, res, next) => {
     if (!user) {
       return res.status(401).send("Invalid email or password.");
     }
-    if (user.isVerified === false) {
-      return res.status(403).send("Please verify your account before signing in.");
+    if (!user.passwordHash) {
+      return res.status(400).send("This account uses Google sign-in. Continue with Google.");
     }
 
     const matches = await bcrypt.compare(password, user.passwordHash);
@@ -156,7 +228,11 @@ router.post("/login", async (req, res, next) => {
     const token = signToken(user._id.toString());
     return res.json({
       token,
-      user: { id: user._id.toString(), email: user.email },
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        isVerified: user.isVerified !== false,
+      },
     });
   } catch (err) {
     return next(err);
@@ -165,12 +241,12 @@ router.post("/login", async (req, res, next) => {
 
 router.get("/verify-account", async (req, res, next) => {
   try {
-    const token = String(req.query.token || "").trim();
-    if (!token) {
+    const verifyToken = String(req.query.token || "").trim();
+    if (!verifyToken) {
       return res.status(400).send("A verification token is required.");
     }
 
-    const tokenHash = hashVerifyAccountToken(token);
+    const tokenHash = hashVerifyAccountToken(verifyToken);
     const user = await User.findOne({
       verifyAccountTokenHash: tokenHash,
     });
@@ -179,18 +255,36 @@ router.get("/verify-account", async (req, res, next) => {
       return res.status(400).send("Invalid or expired verification link.");
     }
 
-    if (user.isVerified === true) {
-      return res.json({ message: "Account already verified. You can sign in." });
-    }
-
     if (!user.verifyAccountExpiresAt || user.verifyAccountExpiresAt <= new Date()) {
       return res.status(400).send("Invalid or expired verification link.");
+    }
+
+    if (user.isVerified === true) {
+      const token = signToken(user._id.toString());
+      return res.json({
+        message: "Account already verified. Signing you in.",
+        token,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          isVerified: true,
+        },
+      });
     }
 
     user.isVerified = true;
     await user.save();
 
-    return res.json({ message: "Account verified successfully. You can now sign in." });
+    const token = signToken(user._id.toString());
+    return res.json({
+      message: "Account verified successfully. Signing you in.",
+      token,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        isVerified: true,
+      },
+    });
   } catch (err) {
     return next(err);
   }

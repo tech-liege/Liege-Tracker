@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { LayoutProvider } from "./context/LayoutContext";
 import { UXProvider } from "./context/UXContext";
 import { SessionProvider, useSession } from "./context/SessionContext";
@@ -23,7 +23,45 @@ function RootRedirect() {
     );
   }
 
-  return <Navigate to={session ? "/dashboard" : "/home"} replace />;
+  if (!session) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return (
+    <Navigate
+      to={session.user?.isVerified === false ? "/settings" : "/dashboard"}
+      replace
+    />
+  );
+}
+
+function RequireSignedIn() {
+  const { session, checkingSession } = useSession();
+
+  if (checkingSession) {
+    return (
+      <section className="rounded-3xl border border-border bg-white/90 p-6 shadow-soft backdrop-blur sm:p-8">
+        <p className="text-sm text-bark">Checking session...</p>
+      </section>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <Outlet />;
+}
+
+function RequireVerified() {
+  const { session } = useSession();
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+  if (session.user?.isVerified === false) {
+    return <Navigate to="/settings" replace />;
+  }
+  return <Outlet />;
 }
 
 export default function App() {
@@ -36,12 +74,16 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route index element={<RootRedirect />} />
                 <Route path="home" element={<HomePage />} />
-                <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="roadmaps" element={<RoadmapsPage />} />
-                <Route path="tasks" element={<TasksPage />} />
-                <Route path="settings" element={<SettingsPage />} />
                 <Route path="auth" element={<AuthPage />} />
                 <Route path="auth/verify-account" element={<VerifyAccountPage />} />
+                <Route element={<RequireSignedIn />}>
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route element={<RequireVerified />}>
+                    <Route path="dashboard" element={<DashboardPage />} />
+                    <Route path="roadmaps" element={<RoadmapsPage />} />
+                    <Route path="tasks" element={<TasksPage />} />
+                  </Route>
+                </Route>
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>

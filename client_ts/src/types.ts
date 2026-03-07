@@ -19,6 +19,7 @@ export type User = {
   id: string;
   email: string;
   isGuest?: boolean;
+  isVerified?: boolean;
 };
 
 export type Session = {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { verifyAccount } from "@/api";
+import { storeToken, verifyAccount } from "@/api";
 
 export default function VerifyAccountPage() {
   const [searchParams] = useSearchParams();
@@ -24,6 +24,12 @@ export default function VerifyAccountPage() {
       try {
         const response = await verifyAccount(token);
         if (!mounted) return;
+        if (response?.token) {
+          storeToken(response.token);
+          setMessage(response?.message || "Account verified. Redirecting...");
+          window.location.assign("/dashboard");
+          return;
+        }
         setMessage(response?.message || "Account verified successfully. You can now sign in.");
       } catch (err) {
         if (!mounted) return;

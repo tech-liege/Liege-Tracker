@@ -1,5 +1,6 @@
 import {
   confirmPasswordReset,
+  loginWithGoogle,
   loginUser,
   registerUser,
   requestAccountVerification,
@@ -25,6 +26,7 @@ export {
   fetchMe,
   sendEmailAlert,
   registerUser,
+  loginWithGoogle,
   requestAccountVerification,
   loginUser,
   requestPasswordReset,
