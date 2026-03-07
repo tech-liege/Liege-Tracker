@@ -301,6 +301,40 @@ export default function TasksPage() {
     }
   }
 
+  async function handleEdit(todo, updates) {
+    if (!isOnline && !isGuestUser) {
+      const message = "You are offline. Creating and updating tasks is disabled until your connection is restored.";
+      setError(message);
+      throw new Error(message);
+    }
+
+    if (isGuestUser) {
+      setTodos((prev) =>
+        prev.map((item) =>
+          item._id === todo._id
+            ? {
+                ...item,
+                ...updates,
+                completed: item.completed,
+                updatedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      setError(null);
+      return;
+    }
+
+    try {
+      const updated = await updateTodo(todo._id, updates);
+      setTodos((prev) => prev.map((item) => (item._id === todo._id ? updated : item)));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
   if (checkingSession) {
     return (
       <Section>
@@ -497,6 +531,7 @@ export default function TasksPage() {
                   todo={todo}
                   formatDueDate={formatDueDate}
                   onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
                   onDelete={handleDelete}
                   normalizeStatus={normalize.status}
                   actionsDisabled={!isOnline && !isGuestUser}

@@ -180,7 +180,7 @@ export default function TasksPage() {
 
   async function handleStatusChange(todo: Todo, nextStatus: TodoStatus) {
     if (!nextStatus || nextStatus === normalize.status(todo)) return;
-    if (!isOnline) {
+    if (!isOnline && !isGuestUser) {
       setError("You are offline. Creating and updating tasks is disabled until your connection is restored.");
       return;
     }
@@ -207,6 +207,48 @@ export default function TasksPage() {
       setError(null);
     } catch (err) {
       setError((err as Error).message);
+    }
+  }
+
+  async function handleEdit(
+    todo: Todo,
+    updates: {
+      text: string;
+      dueDate: string | null;
+      priority: TodoPriority;
+      tags: string[];
+    },
+  ) {
+    if (!isOnline && !isGuestUser) {
+      const message = "You are offline. Creating and updating tasks is disabled until your connection is restored.";
+      setError(message);
+      throw new Error(message);
+    }
+
+    if (isGuestUser) {
+      setTodos((prev) =>
+        prev.map((item) =>
+          item._id === todo._id
+            ? {
+                ...item,
+                ...updates,
+                completed: item.completed,
+                updatedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      setError(null);
+      return;
+    }
+
+    try {
+      const updated = await updateTodo(todo._id, updates);
+      setTodos((prev) => prev.map((item) => (item._id === todo._id ? updated : item)));
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+      throw err;
     }
   }
 
@@ -371,8 +413,9 @@ export default function TasksPage() {
                 todo={todo}
                 formatDueDate={formatDueDate}
                 onStatusChange={handleStatusChange}
+                onEdit={handleEdit}
                 onDelete={handleDelete}
-                actionsDisabled={!isOnline}
+                actionsDisabled={!isOnline && !isGuestUser}
               />
             ))}
           </ul>
