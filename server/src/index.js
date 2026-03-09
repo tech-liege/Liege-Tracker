@@ -21,7 +21,7 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-app.use(cors({ origin: ["http://localhost:5174", "http://localhost:5173"] }));
+app.use(cors({ origin: ["http://localhost:5174", "http://localhost:5173", "https://liege-tracker.vercel.app"] }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
