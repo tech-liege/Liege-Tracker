@@ -43,3 +43,7 @@ The client uses `/api` by default and Vite proxies it to `http://localhost:4000`
 - Continue as guest from the auth screen.
 - Guest todos are stored locally on the device (`localStorage`), not in MongoDB.
 - AI roadmap generation is disabled in guest mode.
+
+## Auth Troubleshooting
+- If Google sign-in fails in production but backend health checks pass, disable browser wallet/privacy extensions and retry in an Incognito window.
+- Some injected providers (for example Bybit wallet extension) can interfere with Google Identity popup/postMessage flow and cause sign-in to fail.
